@@ -33,4 +33,4 @@ vignettes/*.pdf
 *.knit.md
 
 # secret keys
-secret.key.txt
+*.key.txt
