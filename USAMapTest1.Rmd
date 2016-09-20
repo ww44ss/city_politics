@@ -132,11 +132,12 @@ authURL <- "https://api.twitter.com/oauth/authorize"
 
 keys <- read.table("/users/winstonsaunders/documents/city_politics/secret.key.txt")
 
+keys <- keys[,3] %>% as.character
 
-consumerKey <- keys$V3[1]
-consumerSecret <- keys$V3[2]
-accessToken <- keys$V3[3]
-accessTokenSecret <- keys$V3[4]
+consumerKey <- keys[1]
+consumerSecret <- keys[2]
+accessToken <- keys[3]
+accessTokenSecret <- keys[4]
 
 ## set up authentication
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
