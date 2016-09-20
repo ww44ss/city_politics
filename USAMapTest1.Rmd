@@ -69,11 +69,12 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
     cities <- cities[complete.cases(cities),]
 
 
-    pip.county <- function(coords.x){
+    pip.county.state <- function(coords.x){
     
     ## input: coords.x = data frame of (lat, lon) pair
     ## returns: data frame with added column for pip.state and pip.county
     ## requires: ggmap and counties data and city data from maps
+        
     coords.x<-as_data_frame(coords.x)
     
     coords.x$pip.county <- rep(0, nrow(coords.x))
@@ -119,41 +120,7 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
 
 ```
 
-```{r}
 
-pip.accuracy <- 1.0  ## assumption could be checked
-pip.thruput <- round(number.to.compute/(2000*get.county.time), 12) %>% as.numeric %>% round(2)
-
-```
-
-
-```{r}
-
-## PiP THROUGHPUT VERSUS NUMBER OF POINTS
-
-n.steps <- 57
-
-data.compile.df <- data_frame("n" = 1.1*1:n.steps, "time" = 1.1*1:n.steps, "time.per.datapoint" = 1.1*1:n.steps)
-
-for (jj in 1:n.steps){
-    
-    n_coords <- 35*jj
-    
-    coords.x <- coords[1:n_coords, 1:2] %>% as.data.frame()
-    
-    get.county.start.time <- proc.time() 
-
-    pip.county.result <- pip.oregon.county(coords.x)
-    
-    get.county.time <- (proc.time() - get.county.start.time)[1] %>% as.numeric
-    
-    data.compile.df[jj,1] <- n_coords
-
-    data.compile.df[jj,2] <- round(1000*get.county.time, 2) 
-    
-    data.compile.df[jj,3] <- round(1000*get.county.time/n_coords, 2) 
-}
-```
 
 
 ```{r, fig.height=4}
@@ -177,140 +144,6 @@ In practice, the P-i-P is much faster than the API call. Based on a stand-alone 
 
 Note, as the number of points get's large, the thruput (points/time) asymptotes to a constant value of roughly `r 1/0.00020` points/msec.
 
-####Comparison of P-i-P to Google Maps API Accuracy 
-
-Initially I had assumed the API method would provide 100% accurate results. However, as I investigated, I was suprised to learn they did not. Indeed errors in the API data contributed about 2% error to the randomForest classifier developed below.  
-
-In order to establish a "grounded truth" for developing a supervised machine learning capability, it's useful to compare the results of the P-i-P and API methods. This is best seen visually by mapping points of agreement adn disagreement between the two methods. 
-
-The code chunk below creates the base maps used in this work. 
-
-```{r eval = FALSE, echo=TRUE}
-
- ## Create State Map With County Boundaries Overlayed
-
-    library(ggmap)
-    map = get_googlemap(center =  c(lon = -120.31619, lat = 44), 
-              zoom = 6, size = c(450, 340), scale = 2, source = "google",
-              maptype="roadmap") #, key = my.secret.key)
-
-    map.plot = ggmap(map)
-
-    ## get oregon counties
-
-    counties <- map_data("county")
-    state_county <- subset(counties, region == 'oregon')
-
-    ## plot map
-    map.plot + 
-        geom_polygon(data = state_county, aes(x=long, y=lat, group = group), 
-                     fill = NA, color = "darkblue") 
-
-```
-
-
-Points of disagreement between the Google Maps API and the P-i-P method are clearly show the problem is with the API calls. Note that data-points along the coast are excluded as there is a systematic (non-random) difference in how these are classified between the API and P-i-P methods. 
-
-Several points within county interiors don't agree. At this point it's not clear whether the disagreement is an inherent to the Google Maps API reverse geocoding algorithms, or with the way I have interpreted the resulting data (which are returned in a very "untidy" format). This could be investigated with some more effort in data collection.  
-
-
-```{r}
-
-    ## USE PiP to COMPUTE API ACCURACY
-
-    number.to.compute <- 4000
-
-    set.seed(8675309)
-    data.select <- sample(1:nrow(coords), number.to.compute)
-    
-    ## get rid of points on coast
-    
-    # coastal <- function(lon, lat) {
-    #     coastal <- FALSE
-    #     if (lat >=42. && lat < 43.5 && lon <= -124.1) coastal <- TRUE
-    #     if (lat >= 43.5 && lat < 45 && lon <= -123.9) coastal <- TRUE
-    #     if (lat >=45. && lon <= -123.8) coastal <- TRUE
-    #     
-    #     return(coastal)
-    #     
-    # }
-    
-    coastal <- function(x) {
-        
-        ## returns TRUE if point is west of coastal Oregon, FALSE otherwise
-        ## INPUT: x (at Longitude, latitude pair)
-        ## RETURNS: logical (TRUE/FALSE)
-        
-        coastal <- FALSE
-        if (x[2] >=42. && x[2] < 42.75 && x[1] <= -124.2) coastal <- TRUE
-        if (x[2] >=42.75 && x[2] < 43.2 && x[1] <= -124.3) coastal <- TRUE
-        if (x[2] >=43.2 && x[2] < 43.5 && x[1] <= -124.1) coastal <- TRUE
-        if (x[2] >= 43.5 && x[2] < 44 && x[1] <= -124.0) coastal <- TRUE
-        if (x[2] >= 44 && x[2] < 45 && x[1] <= -123.9) coastal <- TRUE
-        if (x[2] >=45. && x[1] <= -123.8) coastal <- TRUE
-
-        return(coastal)
-
-    }
-    
-    
-
-    ## capture a subset of data
-    coords.x <- coords[data.select, 1:2] %>% as_data_frame()
-    
-    ## use coastal function to get rid of points
-    coastal.vec <- apply(coords.x, 1, coastal)
-    coords.x <- coords.x[!coastal.vec, ]
-    
-    ## compute PiP
-    pip.county.result <- pip.oregon.county(coords.x)
-    
-    api.counties <- coords[data.select, 3] %>% lapply(as.character) %>% lapply(tolower)  %>% as_data_frame
-    
-    api.counties <- api.counties[!coastal.vec,]
-    
-    api.counties <- as.factor(api.counties[[1]])
-    
-    pip.counties <- pip.county.result[,3] %>% as_data_frame
-    
-    pip.v.api <- cbind(api.counties, pip.counties) 
-    
-    ## check agreement
-    pip.v.api$agree <- pip.v.api[,1] == pip.v.api[,2]
-    
-    agree.table <- table(pip.v.api$agree)
-    
-    plot.data <- cbind(coords.x, pip.v.api)
-    
-    api.accuracy <- (100*agree.table[2]/(agree.table[1]+agree.table[2])) %>% round(1)
-
-```
-
-The accuracy of the API, as graded against the P-i-P method, is `r api.accuracy`%.
-
-
-```{r fig.align='center'}
-
-
-## use ggmap
-
-library(ggmap)
-map = get_googlemap(center =  c(lon = -120.31619, lat = 44), 
-              zoom = 6, size = c(450, 340), scale = 2, source = "google", maptype="roadmap") #, key = "AIzaSyADdNjbHVwefx-jDyDRPkcSIdcZfznFjc8")
-map.plot = ggmap(map)
-
-# get oregon counties
-counties <- map_data("county")
-state_county <- subset(counties, region == 'oregon')
-
-map.plot + 
-  geom_polygon(data = state_county, aes(x=long, y=lat, group = group), fill = NA, color = "darkblue") + 
-    geom_point(aes(x = lon, y = lat, color = agree), data=plot.data, size = 1.5) +
-    scale_color_manual(values=c("#B74611","#77A1D877")) + 
-    ggtitle("P-i-P versus API Accuracy") + 
-    annotate("text")
-
-```
 
 ###Machine Learning Approaches
 
