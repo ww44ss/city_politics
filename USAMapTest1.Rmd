@@ -78,6 +78,7 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
     coords.x<-as_data_frame(coords.x)
     
     coords.x$pip.county <- rep(0, nrow(coords.x))
+    coords.x$pip.county <- rep(0, nrow(coords.x))
     
     ## determine state
     
@@ -120,7 +121,23 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
 
 ```
 
+```{r "set up twitter API"}
+## create URLs
+reqURL <- "https://api.twitter.com/oauth/request_token"
+accessURL <- "https://api.twitter.com/oauth/access_token"
+authURL <- "https://api.twitter.com/oauth/authorize"
 
+## Keys
+## you get these from apps.twitter.com
+consumerKey <- "oOGbiXRQtI7ttxeG0CQ1BmQ9yd"
+consumerSecret <- "q7bLLF1wV9ZQJd1o7CMuHakwnNYfOU4XIXBLGYjTmczPvP9X8wE"
+accessToken <- "s52073060-KCY5uz5g5lhVXUk8tJFWRrzUejk034yfCDceRgk14"
+accessTokenSecret <- "upBwWtpMXzhLGJXLHypjPtGE2vZd6cnwHzhGHl4UKC6mRk"
+
+## set up authentication
+setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
+
+```
 
 
 ```{r, fig.height=4}
