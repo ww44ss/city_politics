@@ -129,10 +129,14 @@ authURL <- "https://api.twitter.com/oauth/authorize"
 
 ## Keys
 ## you get these from apps.twitter.com
-consumerKey <- "oOGbiXRQtI7ttxeG0CQ1BmQ9yd"
-consumerSecret <- "q7bLLF1wV9ZQJd1o7CMuHakwnNYfOU4XIXBLGYjTmczPvP9X8wE"
-accessToken <- "s52073060-KCY5uz5g5lhVXUk8tJFWRrzUejk034yfCDceRgk14"
-accessTokenSecret <- "upBwWtpMXzhLGJXLHypjPtGE2vZd6cnwHzhGHl4UKC6mRk"
+
+keys <- read.table("/users/winstonsaunders/documents/city_politics/secret.key.txt")
+
+
+consumerKey <- keys$V3[1]
+consumerSecret <- keys$V3[2]
+accessToken <- keys$V3[3]
+accessTokenSecret <- keys$V3[4]
 
 ## set up authentication
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
