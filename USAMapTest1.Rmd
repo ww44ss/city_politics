@@ -69,14 +69,16 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
     cities <- cities[complete.cases(cities),]
 
 
-    pip.oregon.county <- function(coords.x){
+    pip.county <- function(coords.x){
     
     ## input: coords.x = data frame of (lat, lon) pair
-    ## returns: data frame with added column pip.county
-    ## requires: ggmap and counties data
+    ## returns: data frame with added column for pip.state and pip.county
+    ## requires: ggmap and counties data and city data from maps
     coords.x<-as_data_frame(coords.x)
     
     coords.x$pip.county <- rep(0, nrow(coords.x))
+    
+    ## determine state
     
     for (county.x in unique(state_county$subregion)) {
         
