@@ -11,7 +11,7 @@ output:
 ---
 
 ###Summary
-This documents the creation of a high performance reverse geo-coding 
+
   
 ###Problem Statement
 
@@ -25,8 +25,6 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align=
 ```{r libraries}
 library(ggmap)
 library(dplyr)
-library(randomForest)
-library(ggmap)
 library(googleway)
 library(choroplethrMaps)
 library(nnet)
@@ -58,6 +56,7 @@ library(gridExtra)
 library(twitteR)
 require(plyr)
 library(methods)
+library(maps)
     
     options(scipen=999)
 ```
@@ -101,14 +100,14 @@ authURL <- "https://api.twitter.com/oauth/authorize"
 ## Keys
 ## you get these from apps.twitter.com
 
-keys <- read.table("/users/winstonsaunders/documents/city_politics/secret.key.txt")
+keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt")
 
-keys <- keys[,3] %>% as.character
+keys <- keys %>% as.character
 
-consumerKey <- keys[1]
-consumerSecret <- keys[2]
-accessToken <- keys[3]
-accessTokenSecret <- keys[4]
+consumerKey <- keys[1,]%>%as.character()
+consumerSecret <- keys[2,]%>%as.character()
+accessToken <- keys[3,]%>%as.character()
+accessTokenSecret <- keys[4,]%>%as.character()
 
 ## set up authentication
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
@@ -120,21 +119,30 @@ setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 
 ## set up search term
 
-searchString.x = "feelthebern"
-n.x = 300
-radius = "30mi"
+searchString.x <- "feelthebern"
+n.x <- 300
+radius <- "30mi"
+duration.days <- 7
+since.date <- Sys.Date() - duration.days
 
 ```
 
 
 ```{r "get tweets"}
 
-geocode.x <- paste0(coords$lat[i], "," , coords$lon[i], "," , radius)
+for (i in 1:length(cities)){
+    latitude <- cities$lat[i]
+    longitude <- cities$lon[i]
     
-    Sys.sleep(12.1)    # Twitter API limit: 180 calls / 15 minutes = 12 seconds
-    
-    tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x)
+    geocode.x <- paste0(latitude, "," , longitude, "," , radius)
+        
+        Sys.sleep(12.1)    # Twitter API limit: 180 calls / 15 minutes = 12 seconds
+        
+        tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date)
+        
+    }
 
+Sys.Date()
 
 ```
 
