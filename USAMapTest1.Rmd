@@ -82,10 +82,12 @@ To compute P-i-P I used the `{SDMTools}` package, which uses the winding number 
     
     cities <- us.cities
     
-        ## create ciyt_name by removing state designnator
-        cities <- cities %>% mutate(city_name = gsub(' [A-Z]*','', name))
+    ## create ciyt_name by removing state designnator
+    cities <- cities %>% mutate(city_name = gsub(' [A-Z]*','', name))
     
-        cities <- cities[complete.cases(cities),]
+    cities <- cities[complete.cases(cities),] %>% as_data_frame
+    
+    cities <- cities[order(cities$pop, decreasing = TRUE), ]
 
 
 ```
@@ -102,7 +104,7 @@ authURL <- "https://api.twitter.com/oauth/authorize"
 
 keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt")
 
-keys <- keys %>% as.character
+#keys <- keys %>% as.character
 
 consumerKey <- keys[1,]%>%as.character()
 consumerSecret <- keys[2,]%>%as.character()
@@ -119,20 +121,32 @@ setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 
 ## set up search term
 
-searchString.x <- "feelthebern"
-n.x <- 300
+searchString.x <- "#rstats"
+n.x <- 30
 radius <- "30mi"
-duration.days <- 7
-since.date <- Sys.Date() - duration.days
+duration.days <- 1
+    since.date <- (Sys.Date() - duration.days) %>% as.character
 
 ```
 
 
 ```{r "get tweets"}
 
-for (i in 1:length(cities)){
+n.cities <- 25
+
+if (n.cities > nrow(cities)) n.cities <- nrow(cities)
+
+collected_df <- data_frame("n" = 1:n.cities, 
+                           "lat" = rep_len(1., n.cities),
+                           "long" = rep_len(1., n.cities),
+                           "tweets" = as.list(rep_len(c(1,2), n.cities))
+                           )
+
+i <- 2
+
+for (i in 1:n.cities){
     latitude <- cities$lat[i]
-    longitude <- cities$lon[i]
+    longitude <- cities$long[i]
     
     geocode.x <- paste0(latitude, "," , longitude, "," , radius)
         
@@ -142,7 +156,7 @@ for (i in 1:length(cities)){
         
     }
 
-Sys.Date()
+gthSys.Date()
 
 ```
 
