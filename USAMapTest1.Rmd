@@ -26,32 +26,32 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align=
 library(ggmap)
 library(dplyr)
 library(googleway)
-library(choroplethrMaps)
-library(nnet)
-library(SDMTools)
+#library(choroplethrMaps)
+#library(nnet)
+#library(SDMTools)
 library(tidyr)
 library(stringr)
 library(xtable)
     options(xtable.floating = FALSE)
     options(xtable.timestamp = "")
-library(gridExtra)
+#library(gridExtra)
     
-    options(scipen=999)
+#    options(scipen=999)
     
     
-library(ggmap)
-library(dplyr)
-library(randomForest)
-library(ggmap)
+#library(ggmap)
+#library(dplyr)
+#library(randomForest)
+#library(ggmap)
 library(googleway)
-library(choroplethrMaps)
-library(nnet)
-library(SDMTools)
+#library(choroplethrMaps)
+#library(nnet)
+#library(SDMTools)
 library(tidyr)
 library(stringr)
-library(xtable)
-    options(xtable.floating = FALSE)
-    options(xtable.timestamp = "")
+#library(xtable)
+#    options(xtable.floating = FALSE)
+#    options(xtable.timestamp = "")
 library(gridExtra)
 library(twitteR)
 require(plyr)
@@ -63,49 +63,44 @@ library(maps)
 
 
 
-## Use Point-in-Polygon Generated Traininng Set
+## Get city data
 
-[Point-in-Polygon](https://en.wikipedia.org/wiki/Point_in_polygon) (P-i-P) is a standard method for computing whether a given point lies inside a given perimeter, such as a political boundary. 
- 
-To compute P-i-P I used the `{SDMTools}` package, which uses the winding number calculated from a "sum of angles."  
-  
+City coordinates and populations are available in the [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package. The package is super-convenient as it contains all the information we need for plotting and normalizing the tweet data. 
 
-```{r}
+```{r echo=TRUE, results='asis'}
 
-
-
-    require(ggmap)
     require(maps)
-
-    if (!exists("counties")) counties <- map_data("county")
-    if (!exists("states")) states <- map_data("state")
-    
     cities <- us.cities
     
-    ## create ciyt_name by removing state designnator
-    cities <- cities %>% mutate(city_name = gsub(' [A-Z]*','', name))
-    
+    ## create city_name by removing state designnator
+    cities <- cities %>% mutate(city_name = gsub(' [A-Z]{2,}','', name))
+    ## clean
     cities <- cities[complete.cases(cities),] %>% as_data_frame
-    
+    ## sort
     cities <- cities[order(cities$pop, decreasing = TRUE), ]
-
 
 ```
  
+The top cities by population are:  
 
-```{r "set up twitter API"}
+```{r, results='asis'}
+print(xtable(head(cities, 10), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
+```
+
+## Set up twitted API using the twitteR package
+
+Setting up the twitter API is relatively quick. We can test package functionality by checking Michelle Obama's latest tweet.
+
+```{r "set up twitter API", echo=TRUE}
+library(twitteR)
 ## create URLs
 reqURL <- "https://api.twitter.com/oauth/request_token"
 accessURL <- "https://api.twitter.com/oauth/access_token"
 authURL <- "https://api.twitter.com/oauth/authorize"
 
-## Keys
-## you get these from apps.twitter.com
-
+## read file containing secret keys (obtained from apps.twitter.com)
 keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt")
-
-#keys <- keys %>% as.character
-
+## convert to characters
 consumerKey <- keys[1,]%>%as.character()
 consumerSecret <- keys[2,]%>%as.character()
 accessToken <- keys[3,]%>%as.character()
@@ -114,35 +109,41 @@ accessTokenSecret <- keys[4,]%>%as.character()
 ## set up authentication
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 
+## test functionanlity
+userTimeline(getUser('michelleobama'), n=1, includeRts=FALSE,excludeReplies=FALSE)
+
 ```
 
-```{r "set up tweet search"}
+## Getting the data
 
+To get the tweet data use `twitteR::searchTwiter` command. 
+Data collection with the following variables. Note the radius, which is used to localize tweet collected around specific geo-locations. In this initial case I chose a radius of 30 miles. For cases where major cities are in close proximity, this may pick up some redundant tweets.  
 
-## set up search term
+```{r "set up tweet search", echo=TRUE}
 
+## set up search terms
 searchString.x <- "#rstats"
-n.x <- 30
-radius <- "30mi"
-duration.days <- 1
-    since.date <- (Sys.Date() - duration.days) %>% as.character
+n.x <- 300
+radius <- "15mi"
+duration.days <- 7
+since.date <- (Sys.Date() - duration.days) %>% as.character
 
 ```
 
+Collected data are put into a dataframe `collected_df`. For this first pass analysis tweets are counted but not cached.   
 
 ```{r "get tweets"}
-
-n.cities <- 25
+n.cities <- 80
 
 if (n.cities > nrow(cities)) n.cities <- nrow(cities)
 
 collected_df <- data_frame("n" = 1:n.cities, 
                            "lat" = rep_len(1., n.cities),
-                           "long" = rep_len(1., n.cities),
-                           "tweets" = as.list(rep_len(c(1,2), n.cities))
-                           )
-
-i <- 2
+                           "lon" = rep_len(1., n.cities),
+                           "tweets" = as.list(rep_len(c("a","b"), n.cities)),
+                           "n.tweets" = length(tweets),
+                           "population" = rep_len(1., n.cities),
+                           "name" = rep_len("a", n.cities))
 
 for (i in 1:n.cities){
     latitude <- cities$lat[i]
@@ -150,644 +151,68 @@ for (i in 1:n.cities){
     
     geocode.x <- paste0(latitude, "," , longitude, "," , radius)
         
-        Sys.sleep(12.1)    # Twitter API limit: 180 calls / 15 minutes = 12 seconds
+        Sys.sleep(2.)    # Twitter API limit: 180 calls / 15 minutes = 12 seconds
         
         tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date)
         
+        collected_df[i,1] <- i
+        collected_df[i,2] <- latitude
+        collected_df[i,3] <- longitude
+        #collected_df[i,4] <- tweets
+        collected_df[i,5] <- length(tweets)
+        collected_df[i,6] <- cities$pop[i]
+        collected_df[i,7] <- cities$name[i]
     }
 
-gthSys.Date()
+
 
 ```
 
+Once collected, the data are lightly analyzed. Specifically the 'tweet.density', representing the number of tweets per million people per day, is computed.
 
-```{r, fig.height=4}
+```{r "analyze data", echo=TRUE}
 
-## PLOT PiP THROUGHPUT VERSUS NUMBER OF POINTS
+analyzed_df <- collected_df %>% 
+    mutate("tweet.density" = 10^6 * n.tweets/population/duration.days ) %>% 
+    select(name, lon, lat, tweet.density, n.tweets, population)
 
-    ggplot(data.compile.df, aes(x = n, y = time)) +
-    geom_point(aes(color = 'total.time')) + 
-    geom_point(aes(y = time.per.datapoint, color = 'time.per.point')) +
-    scale_colour_manual(name='time', labels = c("per point", "total"), values=c('total.time'='#AA3455', 'time.per.point'='#223477')) +
-    ggtitle("Point-in-Polygon compute performance") +
-    theme(legend.title=element_text(colour="black", size=10, face="bold")) +
-    xlab("number of points") +
-    ylab("time (msec)") + 
-    theme(panel.grid.minor = element_blank()) +
-    scale_y_log10(breaks = c(0.2, 1, 2, 10, 20, 100, 200, 1000))
 
 ```
 
-In practice, the P-i-P is much faster than the API call. Based on a stand-alone benchmark run, for `r number.to.compute` points, the throughput is `r pip.thruput` points per msec - an improvement of roughly a factor of `r 50* ((pip.thruput/api.thruput/50) %>% round(0))` over the API calls. 
+## Tweet Map
 
-Note, as the number of points get's large, the thruput (points/time) asymptotes to a constant value of roughly `r 1/0.00020` points/msec.
-
-
-###Machine Learning Approaches
-
-Since high speed and (not necessarily perfect) accuracy are goals, the question arises, can classification machine learning algorithms be trained well enough to provide adequate accuracy (e.g. close to 98%) and offer a substantial speed advantage?  
-
-####Method  
-Supervised machine learning requires a large number of random (latitude, longitude) "grounded truth" data points. Based on the above analysis I generated a set of random (lat, lon) pairs and used the P-i-P method for classification. 
-
-To match the intended use-case, data points are based on random sampling within a (latitude, longitude) "rectangle" that exceeds the size of Oregon. Points are then classified by county if they lie within Oregon, or as "outside" if they do not. 
-
-
-```{r "generate coords"}
-
-    #generate a random set of coords
-
-    ##Oregon USA
-    lat.max <- 46.4
-    lat.min <- 41.8
-    lon.max <- -116.5
-    lon.min <- -124.8
-    
-    ## create data frame of random geo-coordinates
-    df_l <- 21023
-    
-    set.seed(210257)
-    ## unique.int.seed <- as.integer((as.double(Sys.time())*1000+Sys.getpid()) %% 2^31)
-    ## set.seed(unique.int.seed)
-    
-    ## create random coordinates
-    ## Use for loop to extract reverse_geocode stuff
-    
-    coords.t <- data_frame("lon" = runif(df_l, min = lon.min, max = lon.max), "lat" = runif(df_l, min = lat.min, max = lat.max))
-    
-    
-
-```
-
-For this work, `r nrow(coords)` data points serve as both training and test data sets.
-
-<br>
-
-```{r}
-    ## this chunk establishes the grounded truth based on the P-i-P 
-    ## strips the API data and replaces it with PiP data. 
-
-    coords.y <- coords[ , 1:2]
-
-    #coords <- pip.oregon.county(coords.y)  # uses values from API calls
-
-    coords <- pip.oregon.county(coords.t)   # uses (lat, lon) values generated above. 
-
-    colnames(coords) <- c("lon", "lat", "county")
-    coords$county <- as.factor(coords$county)
-
-```
-
-
-###Random Forest Classifier Optimization 
-####Accuracy and thruput versus `n_train`
-
-Since speed and accuracy are goals, it makes sense to take a broad look at the accuracy and thruput of a `randomForest` model as a function of `n_train`. To standardize evaluation a subset of `n_test` = 2000 test data points are used for each accuracy evaluation, while the value of `n_train` is allowed to vary.  
-The number of trees `ntree` = 21 was fixed after some rudimentary exploration. Within fairly wide bounds this produced good results. 
-
-```{r "random forest accuracy"}
-
-    n.accuracy.points <- 21
-
-    ## prebuild results data_frame
-    rf.model.char.df <- data_frame("n" = 1:n.accuracy.points, 
-                                   "n_train"= 1:n.accuracy.points, 
-                                   "model_time" = 1.*1:n.accuracy.points, 
-                                   "predict_time" = 1.*1:n.accuracy.points, 
-                                   "accuracy" = 1.*1:n.accuracy.points, 
-                                   "thruput" = 1.*1:n.accuracy.points, 
-                                   "n_test" = 1.*1:n.accuracy.points)
-
-    jj<-21
-    
-    set.seed(8675309)
-    
-    for (jj in 1:n.accuracy.points){
-
-                rf.model.char.df[jj,1] <- jj
-        
-            coords.y <- coords
-        
-            n_model <- 510+jj*731
-            
-                rf.model.char.df[jj,2] <- n_model
-        
-            ## split data sets
-            data.select <- sample(1:nrow(coords.y), n_model)
-            train.set <- coords.y[data.select,]
-            
-            
-            test.set <- coords.y[-data.select,]
-            
-                rf.model.char.df[jj, 7] <- nrow(test.set)
-            
-            
-            #set.seed(8675309)
-            
-            model.start.time <- proc.time()
-            
-            rf.model <- randomForest(county ~., train.set, ntree=29)
-            
-                rf.model.char.df[jj,3] <- 1000*(proc.time() - model.start.time)[1]
-            
-            predict.start.time <- proc.time()
-            predicted.test <- predict(rf.model, test.set)
-            
-                rf.model.char.df[jj,4] <- 1000*(proc.time() - predict.start.time)[1]
-            
-            county.compare <- cbind("actual" = as.character(test.set$county), "model" = as.character(predicted.test)) %>% as.data.frame()
-            county.compare$accurate <- "yes"
-            
-            ## get rid of factors again
-            county.compare$actual <- as.character(county.compare$actual)
-            county.compare$model <- as.character(county.compare$model)
-            
-            county.compare$accurate[(county.compare[,1] != county.compare[,2])] <- "no"
-            
-            plot.data <- cbind("lat" = test.set$lat, "lon" = test.set$lon, "accurate" = county.compare$accurate) %>% as.data.frame
-            
-            plot.data$lat <- plot.data$lat %>% as.character %>% as.numeric
-            plot.data$lon <- plot.data$lon %>% as.character %>% as.numeric
-            
-            plot.data$accurate <- as.factor(plot.data$accurate)
-        
-        
-        predict.sum<-table(plot.data$accurate)
-        
-        ## calculated accuracy in %
-        model.accuracy <- (100*predict.sum[2]/(predict.sum[1]+predict.sum[2])) %>% round(3)
-        
-            rf.model.char.df[jj,5] <- model.accuracy
-            
-            rf.model.char.df[jj,6] <- n_model/rf.model.char.df[jj,4]
-            
-    }
-    
-    #rf.model.char.df
-    
-```
-
-<style>
-  .col2 {
-    columns: 2 300px;         /* number of columns and width in pixels */
-    -webkit-columns: 2 300px; /* chrome, safari */
-    -moz-columns: 2 300px;    /* firefox */
-  }
-  .col3 {
-    columns: 3 200px;
-    -webkit-columns: 3 200px;
-    -moz-columns: 3 200px;
-  }
-</style>
-
-<style>
-tr:hover {background-color: #BBFFFF}
-table { 
-    width: 60%;
-    display: table;
-    border-collapse: collapse;
-    border-spacing: 18px;
-    border-color: #AAAAFF;
-    background-color: #AFEEEE;
-    padding: 2px;
-    font: 12px arial, sans-serif;
-}
-th, td{
-    text-align: center;
-}
-</style>
-
-Here is a sample of the data collected
-<br>
-
-```{r, results='asis'}
-
-    table.select <- seq(from = 1, to = nrow(rf.model.char.df), by = 4)
-    
-    print(xtable(rf.model.char.df[table.select,-1]), type = "html", comment=FALSE, 
-          include.rownames=FALSE, 
-          html.table.attributes='border="3" align="center" ' )
-    
-```
-  
-<br>
-
-
-The accuracy of the `randomForest` improves with the number of points, exceeding 95% accuracy above about 4000 data points. Note that while the model time increases with the number of data points, the time to predict is relatively constant (meaning the predict time per point scales well with the number of points predicted).
-
-```{r, fig.height=3, fig.width=9}
-
-    p1 <- ggplot(rf.model.char.df, aes(x = n_train, y = accuracy)) + geom_point(color = "salmon", size = 2) + ggtitle("accuracy improvement with n_train") + ylim(90, 100) + ylab("accuracy (%)")
-
-    p2 <- ggplot(rf.model.char.df, aes(x = n_train, y = model_time, color = "model", pch="model"), size = 2) + geom_point() +
-        geom_point(aes(x = n_test, y = predict_time, color = "predict", pch = "predict"), size = 2) + 
-        scale_colour_manual(name='Time', labels = c("model", "predict"), values=c('model'='#AA3477', 'predict'='#77AA34')) +
-        scale_shape_manual(name='Time', labels = c("model", "predict"), values=c('model' = 1, 'predict' = 3)) +
-        ylab("time (msec)") +
-        xlab("n_train and n_test") +
-        ggtitle("model & predict total time")+ 
-    theme(panel.grid.minor = element_blank()) +
-    scale_y_log10(breaks = c(0.02, 0.05, 0.1,0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000))
-    
-    p3 <- ggplot(rf.model.char.df, aes(x = n_train, y = model_time/n_train, color = "model", pch="model"), size = 2) + geom_point() +
-        geom_point(aes(x = n_test, y = predict_time/n_test, color = "predict", pch = "predict"), size = 2) + 
-        scale_colour_manual(name='Time', labels = c("model", "predict"), values=c('model'='#AA3477', 'predict'='#77AA34')) +
-        scale_shape_manual(name='Time', labels = c("model", "predict"), values=c('model' = 1, 'predict' = 3)) +
-        ylab("time (msec)") +
-        xlab("n_train and n_test") +
-        ggtitle("model & predict time per point")+ 
-    theme(panel.grid.minor = element_blank()) +
-    scale_y_log10(breaks = c(0.02, 0.05, 0.1,0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000))
-    
-   
-
-#grid.arrange(p2, p3, ncol=2)
-
-```
-
-```{r fig.align='center', fig.height=4, fig.width=7}
-p1
-```
-
-
-Clearly `n_train` has a large influence on the accuracy of the model. Since accuracy near 98% is desired will choose about 15000 data points.  
-
-Computation times (both total and normalize to the number of points) are shown below. Of interest, the modeling time per point for the randomForest is relatively constant. 
-
-```{r, fig.align='center', fig.height=3, fig.width=9 }
-grid.arrange(p2, p3, ncol=2)
-```
-
-
-
-
-####Performance Benchmark Results
-
-```{r, "rf model"}
-
-    ## RANDOMFOREST BENCHMARK
-
-    coords.y <- coords
-
-    n_model <- 14700
-
-    set.seed(334455)
-    data.select <- sample(1:nrow(coords.y), n_model)
-
-    train.set <- coords.y[data.select,]
-    
-    test.set <- coords.y[-data.select,]
-    test.set <- test.set[1:5000,]
-    
-    set.seed(8675309)
-    ntree.x <- 29
-    
-    start.time <- proc.time()
-        rf.model <- randomForest(county ~., train.set, ntree = ntree.x)
-    rf.model.time <- (1000*(proc.time() - start.time)[1]) %>% round(1) %>% as.numeric
-    rf.model.thruput <- (nrow(train.set) / rf.model.time) %>% round(1)
-    
-    start.time <- proc.time()
-        predicted.test <- predict(rf.model, test.set)
-    rf.predict.time <- (1000*((proc.time() - start.time)[1])) %>% as.numeric %>% round(2)
-    rf.predict.thruput <- (nrow(test.set) / rf.predict.time) %>% round(1)
-
-```
-
-Performance was measured as shown in the code snippet below. 
-
-```{r eval=FALSE, echo=TRUE}
-    set.seed(8675309)
-    ## set number of trees
-    ntree.x = 29
-
-    ## start model
-    start.time <- proc.time()
-
-        rf.model <- randomForest(county ~., train.set, ntree = ntree.x)
-        
-    rf.model.time <- (1000.*(proc.time() - start.time)[1]) %>% round(1) %>% as.numeric
-    rf.model.thruput <- (nrow(train.set) / rf.model.time) %>% round(1)
-    
-    ## start prediction
-    start.time <- proc.time()
-    
-        predicted.test <- predict(rf.model, test.set)
-        
-    rf.predict.time <- (1000.*((proc.time() - start.time)[1])) %>% as.numeric %>% round(2)
-    rf.predict.thruput <- (nrow(test.set) / rf.predict.time) %>% round(1)
-
-```
-
-In a standardized run it took `r rf.model.time` msec to model the `r nrow(train.set)` data points. Predictions made on the remaining `r nrow(test.set)` data points took `r round(rf.predict.time, 1)` msec, for a throughput of `r rf.predict.thruput %>% round(1)` data points per msec.
-
-
-
-```{r}
-
-    county.compare <- cbind("actual" = as.character(test.set$county), "model" = as.character(predicted.test)) %>% as.data.frame()
-    county.compare$accurate <- "yes"
-    
-    ## get rid of factors again
-    county.compare$actual <- as.character(county.compare$actual)
-    county.compare$model <- as.character(county.compare$model)
-    
-    county.compare$accurate[(county.compare[,1] != county.compare[,2])] <- "no"
-    
-    plot.data <- cbind("lat" = test.set$lat, "lon" = test.set$lon, "accurate" = county.compare$accurate) %>% as.data.frame
-    
-    plot.data$lat <- plot.data$lat %>% as.character %>% as.numeric
-    plot.data$lon <- plot.data$lon %>% as.character %>% as.numeric
-    
-    plot.data$accurate <- as.factor(plot.data$accurate)
-
-```
-
-
-
-```{r, results='asis'}
-predict.sum<-table(plot.data$accurate)
-
-predict.sum.df <- predict.sum %>% as.data.frame
-
-colnames(predict.sum.df) <- c("accurate", "count")
-
-#print(xtable(predict.sum.df), type = "html", comment=FALSE, include.rownames=FALSE, html.table.attributes='border="3" align="center" ' )
-
-```
-
-Model accuracy is `r (100*predict.sum[2]/(predict.sum[1]+predict.sum[2])) %>% round(1)`%.
-
-```{r}
-
-rf.accuracy <- (100*predict.sum[2]/(predict.sum[1]+predict.sum[2])) %>% round(1)
-
-```
-
-The results of applying a test data set to the model results are mapped below. For the `randomForest` errors appear on the boundaries of counties. No points lie within the interiors. Note that errors occur along both straight and complex boundaries, though error rates appear to increase with boundary complexity. 
+Mapping uses the `{ggmap}` package. 
 
 ```{r fig.align='center'}
 
-    ## State Data and 
+#, size = c(450, 340)
 
 library(ggmap)
-    map = get_googlemap(center =  c(lon = -120.31619, lat = 44), 
-              zoom = 6, size = c(450, 340), scale = 2, source = "google",
+    map = get_googlemap(center =  c(lon = -95.58, lat = 36.83), 
+              zoom = 3, size = c(390, 250), scale = 2, source = "google",
               maptype="roadmap") #, key = my.secret.key)
 
-    map.plot = ggmap(map)
+    map.plot <- ggmap(map)
 
-    # get oregon counties
 
-    counties <- map_data("county")
-    state_county <- subset(counties, region == 'oregon')
-
-    
     map.plot + 
-  geom_polygon(data = state_county, aes(x=long, y=lat, group = group), fill = NA, color = "darkblue") + 
-    geom_point(aes(x = lon, y = lat, color = accurate), data=plot.data, size = 1.5) +
-    scale_color_manual(values=c("#B74611","#77A1D877")) + 
-    ggtitle(paste0("randomForest: ntree = ", ntree.x, "  n_model = ", n_model)) + 
-    annotate("text")
+    geom_point(aes(x = lon, y = lat, fill = tweet.density, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
+        ggtitle(paste0(searchString.x, " tweets for ", duration.days," days since ", since.date)) + 
+        scale_fill_gradient(low = "#BBBBFF", high = "#EE3300", space = "Lab", na.value = "grey50", guide = "colourbar")
 
 ```
 
-
-###Neural Network Classification 
-
-Interest in Neural Networks as  a multiple classification machine learning model is growing. The R package `{nnet}` is a popular version of a neural network model based on a [feed-forward multi-layer perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron).   
-
-In practice, the model required substantial tuning with every paramter adjustemtn. For this case a hidden layer of `size = 12` produced reasonably stable results, though in some cases the `decay` and `rang` variables were tweaked as the number of modeled points in the `train.set` was changed. 
-
-```{r, cache=TRUE}
-
-    coords.y <- coords
-
-
-    n_model <- 10001
-
-    set.seed(334455)
-    data.select <- sample(1:nrow(coords.y), n_model) #nrow(coords.y)*0.5)
-
-    train.set <- coords.y[data.select,]
-    
-    ## add the classifier variables for the nnet
-    train.set$county.class <- class.ind(train.set$county)
-    
-    test.set <- coords.y[-data.select,]
-    
-    if (nrow(test.set) > 5000) test.set <- test.set[1:5000,]
-    
-    decay.x <- 2e-4
-    
-    model.data.start.time <- proc.time()
-        nn.model <- nnet(county.class ~., train.set[,-3], size=12, rang = 0.02, decay = decay.x, maxit = 6000, softmax = TRUE, trace=FALSE)
-
-    nn.model.time <- 1000*(proc.time() - model.data.start.time)[1] %>% as.numeric %>% round(2)
-    nn.model.thruput <- (nrow(train.set) / nn.model.time) %>% round(2)
-    
-    predict.start.time <- proc.time()
-    
-    predicted.test <- predict(nn.model, test.set[,-3], type='class')
-
-    nn.predict.time <- 1000*(proc.time() - predict.start.time)[1] %>% as.numeric %>% round(2)
-    nn.predict.thruput <- (nrow(test.set) / nn.predict.time) %>% round(2)
-    
-
-```
-
-The training set is modeled with the following function call. 
-
-```{r eval=FALSE, echo=TRUE}
-
-decay.x <- 2e-4
-
-nn.model <- nnet(county.class ~., train.set[,-3], size = 12, rang = 0.02, decay = decay.x, maxit = 6000, softmax = TRUE, trace=FALSE) 
-
-```
-
-The model converged after about 860 iterations with the above parameters.
-
-Performance was measured in the same way as for the randomForest. Model times were substantially longer than the randomForest. It took `r (nn.model.time/1000.) %>% round(2)` seconds to model `r nrow(train.set)` data points, while prediction of `r nrow(test.set) ` points took `r nn.predict.time` msec.  
-
-```{r}
-
-    county.compare <- cbind("actual" = as.character(test.set$county), "model" = as.character(predicted.test)) %>% as.data.frame()
-    county.compare$accurate <- "yes"
-    
-    ## get rid of factors again
-    county.compare$actual <- as.character(county.compare$actual)
-    county.compare$model <- as.character(county.compare$model)
-    
-    county.compare$accurate[(county.compare[,1] != county.compare[,2])] <- "no"
-    
-    plot.data <- cbind("lat" = test.set$lat, "lon" = test.set$lon, "accurate" = county.compare$accurate) %>% as.data.frame
-    
-    plot.data$lat <- plot.data$lat %>% as.character %>% as.numeric
-    plot.data$lon <- plot.data$lon %>% as.character %>% as.numeric
-    
-    plot.data$accurate <- as.factor(plot.data$accurate)
-
-```
-
-
+here are the top few cities by tweet density
 
 ```{r, results='asis'}
-    predict.sum<-table(plot.data$accurate)
-
-    nn.accuracy <- (100*predict.sum[2]/(predict.sum[1]+predict.sum[2])) %>% round(1) %>% as.numeric
-
-    predict.sum <- predict.sum %>% as.data.frame
-
-    colnames(predict.sum) <- c("accurate", "count")
-
-    #print(xtable(predict.sum), type = "html", comment=FALSE, include.rownames=FALSE, html.table.attributes='border="3" align="center" ' )
-
+print(xtable(head(analyzed_df[order(analyzed_df$tweet.density, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-Model accuracy `r nn.accuracy`% is well below our goal of 98%. Note that the model might be improved through more extensive tuning and modeling more data points. However the modeling times were already prohibitively long and model stability with a training set approaching 15,000 data points was problematic, so that effort was abandoned.  
-<br>
-The accuracy of the modeling results are shown in the map below. 
-
-
-```{r fig.align='center'}
-
-
-## use ggmap
-
-    library(ggmap)
-
-    ## get google map (if needed uncomment)
-    #map <- get_googlemap(center =  c(lon = -120.31619, lat = 44), zoom = 6, size = c(450, 340), scale = 2, source = "google", maptype="roadmap") #, key = "AIzaSyADdNjbHVwefx-jDyDRPkcSIdcZfznFjc8")
-    #map.plot <- ggmap(map)
-
-    # get oregon counties
-    counties <- map_data("county")
-    state_county <- subset(counties, region == 'oregon')
-
-    nn10001 <- map.plot + 
-        geom_polygon(data = state_county, aes(x=long, y=lat, group = group), fill = NA, color = "darkblue") + 
-        geom_point(aes(x = lon, y = lat, color = accurate), data=plot.data, size = 1.5) +
-        scale_color_manual(values=c("#B74611","#77A1F877")) + 
-        ggtitle("nnet model") + 
-        annotate("text")
-    
-    nn10001
-        
-```
-
-Note that in the case of the `nnet` model, there is, as with other models, substantial error along county boundaries. However, in the case of the `nnet` model, the inaccuracy extends to the county interior in many places, adding yet another reason to conclude the  `nnet` model is less desirable than `randomForest` for this application.   
-
-```{r, eval=FALSE}
-    ## compute a comparable randomForest 
-
-    coords.y <- coords
-
-    n_model <- 10001
-
-    set.seed(334455)
-    data.select <- sample(1:nrow(coords.y), n_model)
-
-    train.set <- coords.y[data.select,]
-
-    test.set <- coords.y[-data.select,]
-
-    if (nrow(test.set) > 5000) test.set <- test.set[1:5000,]
-
-    set.seed(8675309)
-    ntree.x <- 21
-    
-    start.time <- proc.time()
-        rf.model <- randomForest(county ~., train.set, ntree = ntree.x)
-    model.time <- (proc.time() - start.time)[1]
-    
-    start.time <- proc.time()
-        predicted.test <- predict(rf.model, test.set)
-    predict.time <- (proc.time() - start.time)[1]
-
-
-    county.compare <- cbind("actual" = as.character(test.set$county), "model" = as.character(predicted.test)) %>% as.data.frame()
-    county.compare$accurate <- "yes"
-    
-    ## get rid of factors again
-    county.compare$actual <- as.character(county.compare$actual)
-    county.compare$model <- as.character(county.compare$model)
-    
-    county.compare$accurate[(county.compare[,1] != county.compare[,2])] <- "no"
-    
-    plot.data <- cbind("lat" = test.set$lat, "lon" = test.set$lon, "accurate" = county.compare$accurate) %>% as.data.frame
-    
-    plot.data$lat <- plot.data$lat %>% as.character %>% as.numeric
-    plot.data$lon <- plot.data$lon %>% as.character %>% as.numeric
-    
-    plot.data$accurate <- as.factor(plot.data$accurate)
-
-
-    
-predict.sum<-table(plot.data$accurate)
-
-random.Forest.accuracy <- (100*predict.sum[2]/(predict.sum[1]+predict.sum[2])) %>% round(3)
-
-
-#library(ggmap)
-#map = get_googlemap(center =  c(lon = -120.31619, lat = 44), zoom = 6, size = c(450, 340), scale = 2, source = "google", maptype="roadmap") #, key = "AIzaSyADdNjbHVwefx-jDyDRPkcSIdcZfznFjc8")
-#map.plot = ggmap(map)
-
-# get oregon counties
-#counties <- map_data("county")
-#state_county <- subset(counties, region == 'oregon')
-
-rf10001 <- map.plot + 
-  geom_polygon(data = state_county, aes(x=long, y=lat, group = group), fill = NA, color = "darkblue") + 
-    geom_point(aes(x = lon, y = lat, color = accurate), data=plot.data, size = 0.3) +
-    scale_color_manual(values=c("#B74611","#77A1D877")) + 
-    ggtitle("randomForest model") + 
-    annotate("text")
-
-
-
-```
-   
-  
-    
-```{r, fig.align='center'}    
-    #grid.arrange(nn10001, rf10001, ncol=2)
-
-```
-
-
-##Summary & Conclusions  
-
-Various reverse-geocoding schemes were explored for both performance and accuracy, including API calls, P-i-P, and classification machine learning models based on both the `randomForest` and `nnet` packages. 
-
-The table summarizes the results. It shows that a `randomForest` model gives accuracy comparable to that of the Google Maps API of nearly 98%, though with a throughput improvement of over 10^4^. 
-
-<br>
+here are the top few cities by tweets
 
 ```{r, results='asis'}
-
-results.summary <- data_frame("method" = c("API", "P-i-P", "randomForest", "nnet"),
-                              "accuracy (%)" = c(api.accuracy, pip.accuracy*100., rf.accuracy, nn.accuracy), 
-                              "predict.thruput" = c(1/179 %>% as.numeric %>% round(2), pip.thruput %>% as.numeric, rf.predict.thruput %>% as.numeric, nn.predict.thruput %>% as.numeric),
-                              "model.thruput" = c(NA, NA, rf.model.thruput, nn.model.thruput))
-
-
-results.summary.sorted <- results.summary %>% arrange(desc(predict.thruput))
-
-print(xtable(results.summary.sorted), type = "html", comment=FALSE, 
-          include.rownames=FALSE, 
-          html.table.attributes='border="3" align="center" ' )
-
+print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
-<br> 
-
-Modeling throughput times of the `randomForest` are also reasonable (taking several seconds for on the order of 15000 data points on a Intel-based MacBook Air) making it a good choice for the intended application of rapid "on-prem" reverse geocoding.   
-
-While the application of this method has been to counties within State boundaries, it is reasonable this approach can be easily extensible to other reverse geo-coding problems, such as zip codes, congressional districts, and state and national boundaries. This makes the use of a random Forest reverse geocoding approach an attractive options for high performance, high precision reverse geocoding. 
-
-
-
-
 
 
 
