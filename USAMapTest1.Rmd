@@ -1,7 +1,7 @@
 ---
 title: "High Performance Reverse-Geo-Coding Model"
 author: "Winston Saunders"
-date: "September 19, 2016"
+date: "September 22, 2016"
 output: 
     html_document:
         css: markdown7.css
@@ -10,48 +10,38 @@ output:
         keep_md: true
 ---
 
-###Summary
+# Summary
 
-  
-###Problem Statement
+A quesiton was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast about the "best city for data science." To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the frequency and density of tweets with the `#rstats` hashtag. Surprisingly, Boston, with a tweet density of over 75 #rstat tweets per million residents per day ("twepermipeds"), leads the bunch. Other leading cities include Jersey City and Newark, Long Beach and Oakland, Washington DC, Seattle, Raleigh NC, San Francisco, and Henderson NV.  Portland, Oregon weighs-in within the top 15.
+Results are sensitive to assumptions about metro size.  
+This was quick and dirty so no telling how stable the result will be over time.  
 
+# Problem Statement
+
+On their September Podcast, Hilary and Roger discussed the best city for data science. I've never met a person from SF who didn't think SF was the best at everything, so I decided to try measuring something just to double check.  
 
 ```{r setup, include=TRUE, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align='center')
 ```
 
 
-
 ```{r libraries}
+## sorry this is a mess. I hacked another project
+
 library(ggmap)
 library(dplyr)
 library(googleway)
-#library(choroplethrMaps)
-#library(nnet)
-#library(SDMTools)
 library(tidyr)
 library(stringr)
 library(xtable)
     options(xtable.floating = FALSE)
     options(xtable.timestamp = "")
-#library(gridExtra)
-    
-#    options(scipen=999)
-    
-    
-#library(ggmap)
-#library(dplyr)
-#library(randomForest)
-#library(ggmap)
+
 library(googleway)
-#library(choroplethrMaps)
-#library(nnet)
-#library(SDMTools)
+
 library(tidyr)
 library(stringr)
-#library(xtable)
-#    options(xtable.floating = FALSE)
-#    options(xtable.timestamp = "")
+
 library(gridExtra)
 library(twitteR)
 require(plyr)
@@ -63,9 +53,9 @@ library(maps)
 
 
 
-## Get city data
+# How do I get City Data?
 
-City coordinates and populations are available in the [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package. The package is super-convenient as it contains all the information we need for plotting and normalizing the tweet data. 
+City coordinates and populations are available in the super-convenient  [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package, which contains all the information we need for plotting and normalizing tweet data. 
 
 ```{r echo=TRUE, results='asis'}
 
@@ -87,9 +77,9 @@ The top cities by population are:
 print(xtable(head(cities, 10), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-## Set up twitted API using the twitteR package
+# What is required to set up the twitted API using the twitteR package?
 
-Setting up the twitter API is relatively quick. We can test package functionality by checking Michelle Obama's latest tweet.
+Setting up the twitter API is relatively quick. Package functionality is tested by checking Michelle Obama's latest tweet.
 
 ```{r "set up twitter API", echo=TRUE}
 library(twitteR)
@@ -114,23 +104,23 @@ userTimeline(getUser('michelleobama'), n=1, includeRts=FALSE,excludeReplies=FALS
 
 ```
 
-## Getting the data
+# Getting the data
 
-To get the tweet data use `twitteR::searchTwiter` command. 
-Data collection with the following variables. Note the radius, which is used to localize tweet collected around specific geo-locations. In this initial case I chose a radius of 30 miles. For cases where major cities are in close proximity, this may pick up some redundant tweets.  
+To get the tweet data use the `twitteR::searchTwiter` command. 
+Data collection is with the following variables. Note the radius of 20 miles, which is used to localize tweet collected around specific geo-locations. In this amazingly crude initial case I chose a radius of 20 miles. For cases where major cities are in close proximity, this certainly picks up some redundant tweets. Life in the big leagues.
 
 ```{r "set up tweet search", echo=TRUE}
 
 ## set up search terms
-searchString.x <- "#rstats"
-n.x <- 300
-radius <- "15mi"
-duration.days <- 7
-since.date <- (Sys.Date() - duration.days) %>% as.character
+searchString.x <- "#rstats"    # search term
+n.x <- 500                     # number of tweets
+radius <- "20mi"               # radius around selected geo-location
+duration.days <- 7             # how many days
+since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
 
 ```
 
-Collected data are put into a dataframe `collected_df`. For this first pass analysis tweets are counted but not cached.   
+
 
 ```{r "get tweets"}
 n.cities <- 80
@@ -168,7 +158,11 @@ for (i in 1:n.cities){
 
 ```
 
-Once collected, the data are lightly analyzed. Specifically the 'tweet.density', representing the number of tweets per million people per day, is computed.
+I pull data for the top `r n.cities` cities (by population) in the U.S. This includes cities from `r collected_df$name[1]` to `r collected_df$name[n.cities]`.
+
+# Analysis
+
+Once collected, the data are lightly analyzed. Specifically the 'tweet.density', representing the number of tweets per million people per day ("twepermipeds"), is computed.
 
 ```{r "analyze data", echo=TRUE}
 
@@ -179,7 +173,11 @@ analyzed_df <- collected_df %>%
 
 ```
 
-## Tweet Map
+
+
+Collected data are put into  `collected_df`. For this first-pass analysis tweets are counted but are not cached. 
+
+# What is the Tweet Map?
 
 Mapping uses the `{ggmap}` package. 
 
@@ -202,13 +200,15 @@ library(ggmap)
 
 ```
 
-here are the top few cities by tweet density
+# What are the top cities by tweets and densities?
+
+here are the top few cities by tweet density (tweet per million per day, or "twepermipeds")
 
 ```{r, results='asis'}
 print(xtable(head(analyzed_df[order(analyzed_df$tweet.density, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-here are the top few cities by tweets
+here are the top few cities sorted by raw tweets
 
 ```{r, results='asis'}
 print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)

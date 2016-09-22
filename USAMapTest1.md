@@ -1,24 +1,28 @@
 # High Performance Reverse-Geo-Coding Model
 Winston Saunders  
-September 19, 2016  
+September 22, 2016  
 
-###Summary
+# Summary
 
-  
-###Problem Statement
-
-
+A quesiton was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast about the "best city for data science."" I use the `twitteR` package to measure interest in __R__ by computing the frequency and desity of tweets with the `#rstats` hashtag. Surprisingly, Boston, with a tweet density of over 75 #rstat tweets per million residents per day. Other leading cities include Jersey City and Newark, Oakland, Washington DC, Seattle, San Francisco, and Henderson, NV. 
+Data are sensitive to assumptions about metro size. This was quick and dirty so no telling how stable the result will be over time. 
 
 
+# Problem Statement
 
-
-
+On their September Podcast, Hilary and Roger discussed the best city for data science. I've nvever met a person from SF who didn't think SF was the best at everything. So I decided to try measuring something. 
 
 
 
-## Get city data
 
-City coordinates and populations are available in the [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package. The package is super-convenient as it contains all the information we need for plotting and normalizing the tweet data. 
+
+
+
+
+
+# How do I get City Data?
+
+City coordinates and populations are available in the super-convenient  [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package, which contains all the information we need for plotting and normalizing tweet data. 
 
 
 ```r
@@ -51,9 +55,9 @@ The top cities by population are:
   <tr> <td align="right"> San Jose CA </td> <td align="center"> CA </td> <td align="center"> 897883 </td> <td align="center"> 37.30 </td> <td align="center"> -121.85 </td> <td align="center">   0 </td> <td align="center"> San Jose </td> </tr>
    </table>
 
-## Set up twitted API using the twitteR package
+# What is required to set up the twitted API using the twitteR package?
 
-Setting up the twitter API is relatively quick. We can test package functionality by checking Michelle Obama's latest tweet.
+Setting up the twitter API is relatively quick. Package functionality is tested by checking Michelle Obama's latest tweet.
 
 
 ```r
@@ -89,37 +93,26 @@ userTimeline(getUser('michelleobama'), n=1, includeRts=FALSE,excludeReplies=FALS
 ## [1] "MichelleObama: “We can give all our children the bright, healthy futures they so richly deserve.” http://t.co/EgStdzksym #LetsMove"
 ```
 
-## Getting the data
+# Getting the data
 
-To get the tweet data use `twitteR::searchTwiter` command. 
-Data collection with the following variables. Note the radius, which is used to localize tweet collected around specific geo-locations. In this initial case I chose a radius of 30 miles. For cases where major cities are in close proximity, this may pick up some redundant tweets.  
+To get the tweet data use the `twitteR::searchTwiter` command. 
+Data collection is with the following variables. Note the radius, which is used to localize tweet collected around specific geo-locations. In this amazingly crude initial case I chose a radius of 20 miles. For cases where major cities are in close proximity, this certainly picks up some redundant tweets. Life in the big leagues.
 
 
 ```r
 ## set up search terms
-searchString.x <- "#rstats"
-n.x <- 300
-radius <- "30mi"
-duration.days <- 7
-since.date <- (Sys.Date() - duration.days) %>% as.character
+searchString.x <- "#rstats"    # search term
+n.x <- 500                     # number of tweets
+radius <- "20mi"               # radius around selected geo-location
+duration.days <- 7             # how many days
+since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
 ```
 
-Collected data are put into a dataframe `collected_df`. For this first pass analysis tweets are counted but not cached.   
+Collected data are put into  `collected_df`. For this first-pass analysis tweets are counted but are not cached.   
 
 
-```
-## [1] "Rate limited .... blocking for a minute and retrying up to 119 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 118 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 117 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 116 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 115 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 114 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 113 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 112 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 111 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 110 times ..."
-## [1] "Rate limited .... blocking for a minute and retrying up to 109 times ..."
-```
+
+# Analysis
 
 Once collected, the data are lightly analyzed. Specifically the 'tweet.density', representing the number of tweets per million people per day, is computed.
 
@@ -130,11 +123,13 @@ analyzed_df <- collected_df %>%
     select(name, lon, lat, tweet.density, n.tweets, population)
 ```
 
-## Tweet Map
+# What is the Tweet Map?
 
 Mapping uses the `{ggmap}` package. 
 
 <img src="USAMapTest1_files/figure-html/unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
+
+# What are the top cities by tweets adn densities?
 
 here are the top few cities by tweet density
 
@@ -142,19 +137,45 @@ here are the top few cities by tweet density
 <!--  -->
 <table border=1>
 <tr> <th> name </th> <th> tweet.density </th> <th> n.tweets </th> <th> population </th>  </tr>
-  <tr> <td> Boston MA </td> <td align="right"> 74.73 </td> <td align="right"> 297 </td> <td align="right"> 567759.00 </td> </tr>
-  <tr> <td> Glendale CA </td> <td align="right"> 62.10 </td> <td align="right">  89 </td> <td align="right"> 204747.00 </td> </tr>
-  <tr> <td> Fremont CA </td> <td align="right"> 57.83 </td> <td align="right">  82 </td> <td align="right"> 202574.00 </td> </tr>
-  <tr> <td> Jersey City NJ </td> <td align="right"> 57.23 </td> <td align="right">  95 </td> <td align="right"> 237125.00 </td> </tr>
-  <tr> <td> Newark NJ </td> <td align="right"> 48.23 </td> <td align="right">  95 </td> <td align="right"> 281378.00 </td> </tr>
-  <tr> <td> Anaheim CA </td> <td align="right"> 37.96 </td> <td align="right">  89 </td> <td align="right"> 334909.00 </td> </tr>
-  <tr> <td> Denver CO </td> <td align="right"> 37.73 </td> <td align="right"> 147 </td> <td align="right"> 556575.00 </td> </tr>
-  <tr> <td> Santa Ana CA </td> <td align="right"> 36.95 </td> <td align="right">  89 </td> <td align="right"> 344086.00 </td> </tr>
-  <tr> <td> Birmingham AL </td> <td align="right"> 33.02 </td> <td align="right">  53 </td> <td align="right"> 229300.00 </td> </tr>
-  <tr> <td> Oakland CA </td> <td align="right"> 29.40 </td> <td align="right">  81 </td> <td align="right"> 393632.00 </td> </tr>
+  <tr> <td> Boston MA </td> <td align="right"> 75.99 </td> <td align="right"> 302 </td> <td align="right"> 567759.00 </td> </tr>
+  <tr> <td> Jersey City NJ </td> <td align="right"> 72.90 </td> <td align="right"> 121 </td> <td align="right"> 237125.00 </td> </tr>
+  <tr> <td> Newark NJ </td> <td align="right"> 61.43 </td> <td align="right"> 121 </td> <td align="right"> 281378.00 </td> </tr>
+  <tr> <td> Long Beach CA </td> <td align="right"> 26.72 </td> <td align="right">  91 </td> <td align="right"> 486571.00 </td> </tr>
+  <tr> <td> Oakland CA </td> <td align="right"> 25.40 </td> <td align="right">  70 </td> <td align="right"> 393632.00 </td> </tr>
+  <tr> <td> WASHINGTON DC </td> <td align="right"> 20.58 </td> <td align="right">  79 </td> <td align="right"> 548359.00 </td> </tr>
+  <tr> <td> Seattle WA </td> <td align="right"> 14.78 </td> <td align="right">  59 </td> <td align="right"> 570430.00 </td> </tr>
+  <tr> <td> Raleigh NC </td> <td align="right"> 13.85 </td> <td align="right">  34 </td> <td align="right"> 350822.00 </td> </tr>
+  <tr> <td> San Francisco CA </td> <td align="right"> 13.82 </td> <td align="right">  70 </td> <td align="right"> 723724.00 </td> </tr>
+  <tr> <td> Henderson NV </td> <td align="right"> 12.85 </td> <td align="right">  23 </td> <td align="right"> 255646.00 </td> </tr>
+  <tr> <td> Chicago IL </td> <td align="right"> 11.76 </td> <td align="right"> 233 </td> <td align="right"> 2830144.00 </td> </tr>
+  <tr> <td> Saint Petersburg FL </td> <td align="right"> 9.30 </td> <td align="right">  16 </td> <td align="right"> 245804.00 </td> </tr>
+  <tr> <td> Arlington TX </td> <td align="right"> 9.15 </td> <td align="right">  24 </td> <td align="right"> 374729.00 </td> </tr>
+  <tr> <td> Portland OR </td> <td align="right"> 7.11 </td> <td align="right">  27 </td> <td align="right"> 542751.00 </td> </tr>
+  <tr> <td> Tampa FL </td> <td align="right"> 6.96 </td> <td align="right">  16 </td> <td align="right"> 328578.00 </td> </tr>
    </table>
 
+here are the top few cities by tweets
 
+<!-- html table generated in R 3.3.0 by xtable 1.8-2 package -->
+<!--  -->
+<table border=1>
+<tr> <th> name </th> <th> tweet.density </th> <th> n.tweets </th> <th> population </th>  </tr>
+  <tr> <td> Boston MA </td> <td align="right"> 75.99 </td> <td align="right"> 302 </td> <td align="right"> 567759.00 </td> </tr>
+  <tr> <td> Chicago IL </td> <td align="right"> 11.76 </td> <td align="right"> 233 </td> <td align="right"> 2830144.00 </td> </tr>
+  <tr> <td> New York NY </td> <td align="right"> 2.13 </td> <td align="right"> 121 </td> <td align="right"> 8124427.00 </td> </tr>
+  <tr> <td> Newark NJ </td> <td align="right"> 61.43 </td> <td align="right"> 121 </td> <td align="right"> 281378.00 </td> </tr>
+  <tr> <td> Jersey City NJ </td> <td align="right"> 72.90 </td> <td align="right"> 121 </td> <td align="right"> 237125.00 </td> </tr>
+  <tr> <td> Los Angeles CA </td> <td align="right"> 3.32 </td> <td align="right">  91 </td> <td align="right"> 3911500.00 </td> </tr>
+  <tr> <td> Long Beach CA </td> <td align="right"> 26.72 </td> <td align="right">  91 </td> <td align="right"> 486571.00 </td> </tr>
+  <tr> <td> WASHINGTON DC </td> <td align="right"> 20.58 </td> <td align="right">  79 </td> <td align="right"> 548359.00 </td> </tr>
+  <tr> <td> San Francisco CA </td> <td align="right"> 13.82 </td> <td align="right">  70 </td> <td align="right"> 723724.00 </td> </tr>
+  <tr> <td> Oakland CA </td> <td align="right"> 25.40 </td> <td align="right">  70 </td> <td align="right"> 393632.00 </td> </tr>
+  <tr> <td> Seattle WA </td> <td align="right"> 14.78 </td> <td align="right">  59 </td> <td align="right"> 570430.00 </td> </tr>
+  <tr> <td> Raleigh NC </td> <td align="right"> 13.85 </td> <td align="right">  34 </td> <td align="right"> 350822.00 </td> </tr>
+  <tr> <td> Portland OR </td> <td align="right"> 7.11 </td> <td align="right">  27 </td> <td align="right"> 542751.00 </td> </tr>
+  <tr> <td> Arlington TX </td> <td align="right"> 9.15 </td> <td align="right">  24 </td> <td align="right"> 374729.00 </td> </tr>
+  <tr> <td> Philadelphia PA </td> <td align="right"> 2.28 </td> <td align="right">  23 </td> <td align="right"> 1439814.00 </td> </tr>
+   </table>
 
 
 
