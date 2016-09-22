@@ -1,5 +1,5 @@
 ---
-title: "High Performance Reverse-Geo-Coding Model"
+title: "Boston leads in #rstats Twipermipeds"
 author: "Winston Saunders"
 date: "September 22, 2016"
 output: 
@@ -12,8 +12,8 @@ output:
 
 # Summary
 
-A quesiton was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast about the "best city for data science." To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the frequency and density of tweets with the `#rstats` hashtag. Surprisingly, Boston, with a tweet density of over 75 #rstat tweets per million residents per day ("twepermipeds"), leads the bunch. Other leading cities include Jersey City and Newark, Long Beach and Oakland, Washington DC, Seattle, Raleigh NC, San Francisco, and Henderson NV.  Portland, Oregon weighs-in within the top 15.
-Results are sensitive to assumptions about metro size.  
+The question "what's the best city for data science?" was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast. To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the frequency and density of tweets with the `#rstats` hashtag. Surprisingly, Boston, with a tweet density of over 75 #rstat tweets per million residents per day ("twepermipeds"), leads the bunch. Other leading cities include Jersey City and Newark, Long Beach and Oakland, Washington DC, Seattle, Raleigh NC, San Francisco, and Henderson NV.  Even Portland, Oregon weighs-in within the top 15.
+Results are somewhat sensitive to assumptions about metro size.  
 This was quick and dirty so no telling how stable the result will be over time.  
 
 # Problem Statement
