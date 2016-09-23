@@ -1,5 +1,5 @@
 ---
-title: "Boston leads in #rstats Twipermipeds"
+title: "Leading Cities in #rstats Twipermipeds"
 author: "Winston Saunders"
 date: "September 22, 2016"
 output: 
@@ -12,16 +12,18 @@ output:
 
 # Summary
 
-The question "what's the best city for data science?" was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast. To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the frequency and density of tweets with the `#rstats` hashtag. Surprisingly, Boston, with a tweet density of over 75 #rstat tweets per million residents per day ("twepermipeds"), leads the bunch. Other leading cities include Jersey City and Newark, Long Beach and Oakland, Washington DC, Seattle, Raleigh NC, San Francisco, and Henderson NV.  Even Portland, Oregon weighs-in within the top 15.
-Results are somewhat sensitive to assumptions about metro size.  
-This was quick and dirty so no telling how stable the result will be over time.  
+The question "what's the best city for data science?" was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast. To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the "flux" of tweets with the `#rstats` hashtag.   
+The top metro areas are New York, Boston, and the SF Bay area, with a tweet flux of about 50 #rstat tweets per million residents per day ("twipermipeds"). Other leading cities include Long Beach, Washington DC, Seattle, Raleigh NC, and Henderson NV.  
+Even Portland, Oregon (*yay*) weighs-in within the top 15 on tweets.
+Results are sensitive to assumptions about metro size and show some short term time dependency.   
+This was quick and dirty so no telling how stable the result will be over longer time.  
 
 # Problem Statement
 
-On their September Podcast, Hilary and Roger discussed the best city for data science. I've never met a person from SF who didn't think SF was the best at everything, so I decided to try measuring something just to double check.  
+In their September NSSD Podcast, Hilary and Roger discussed "_the best city for data science._" Let's try measuring something just to inject a little analysis into the discussion. 
 
 ```{r setup, include=TRUE, echo=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align='center')
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align='center', comment = "")
 ```
 
 
@@ -51,11 +53,45 @@ library(maps)
     options(scipen=999)
 ```
 
+# Where do I get data?
 
+Twitter is a good source of data on "interest" in topics since it is both timely and social. 
 
-# How do I get City Data?
+## Tweets, the Twitter API, and twitteR package.
 
-City coordinates and populations are available in the super-convenient  [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package, which contains all the information we need for plotting and normalizing tweet data. 
+Setting up the twitter API is relatively quick. 
+
+```{r "set up twitter API", echo=TRUE}
+library(twitteR)
+## create URLs
+reqURL <- "https://api.twitter.com/oauth/request_token"
+accessURL <- "https://api.twitter.com/oauth/access_token"
+authURL <- "https://api.twitter.com/oauth/authorize"
+
+## read file containing secret keys (obtained from apps.twitter.com)
+keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt", stringsAsFactors = FALSE, col.names = "secret" )
+## convert to characters (read.table coerces to a factor)
+consumerKey       <- keys$secret[1] 
+consumerSecret    <- keys$secret[2] 
+accessToken       <- keys$secret[3] 
+accessTokenSecret <- keys$secret[4] 
+
+## set up authentication
+setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
+```
+
+Test functionality with George Takei's latest tweet
+
+```{r echo = TRUE}
+## test functionanlity with georgetakei tweets
+userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
+```
+
+it works!  
+
+## City populations and geo-locations
+
+We'll also need to localize tweets to cities and thus need the lat and lon of major US cities. It's alos be nice to mormalize the data to population. It turns out sity coordinates and populations are available in the super-convenient  [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package. 
 
 ```{r echo=TRUE, results='asis'}
 
@@ -71,59 +107,35 @@ City coordinates and populations are available in the super-convenient  [`{maps}
 
 ```
  
-The top cities by population are:  
+Accoring to the package, the top US cities by population are:  
 
 ```{r, results='asis'}
-print(xtable(head(cities, 10), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
+print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-# What is required to set up the twitted API using the twitteR package?
+Looks right...
 
-Setting up the twitter API is relatively quick. Package functionality is tested by checking Michelle Obama's latest tweet.
-
-```{r "set up twitter API", echo=TRUE}
-library(twitteR)
-## create URLs
-reqURL <- "https://api.twitter.com/oauth/request_token"
-accessURL <- "https://api.twitter.com/oauth/access_token"
-authURL <- "https://api.twitter.com/oauth/authorize"
-
-## read file containing secret keys (obtained from apps.twitter.com)
-keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt")
-## convert to characters
-consumerKey <- keys[1,]%>%as.character()
-consumerSecret <- keys[2,]%>%as.character()
-accessToken <- keys[3,]%>%as.character()
-accessTokenSecret <- keys[4,]%>%as.character()
-
-## set up authentication
-setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
-
-## test functionanlity
-userTimeline(getUser('michelleobama'), n=1, includeRts=FALSE,excludeReplies=FALSE)
-
-```
-
-# Getting the data
+## Getting the tweets
 
 To get the tweet data use the `twitteR::searchTwiter` command. 
-Data collection is with the following variables. Note the radius of 20 miles, which is used to localize tweet collected around specific geo-locations. In this amazingly crude initial case I chose a radius of 20 miles. For cases where major cities are in close proximity, this certainly picks up some redundant tweets. Life in the big leagues.
+Data collection is with the following variables. 
 
 ```{r "set up tweet search", echo=TRUE}
 
 ## set up search terms
 searchString.x <- "#rstats"    # search term
-n.x <- 500                     # number of tweets
-radius <- "20mi"               # radius around selected geo-location
-duration.days <- 7             # how many days
+n.x <- 900                     # number of tweets
+radius <- "10mi"               # radius around selected geo-location
+duration.days <- 14             # how many days
 since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
 
 ```
 
+Note the radius of `r radius`, which is used to localize tweet collected around specific geo-locations.  For cases, where major cities are in close proximity, this certainly picks up some redundant tweets. More work needed here...
 
 
-```{r "get tweets"}
-n.cities <- 80
+```{r echo = 1, "get tweets"}
+n.cities <- 57
 
 if (n.cities > nrow(cities)) n.cities <- nrow(cities)
 
@@ -140,8 +152,8 @@ for (i in 1:n.cities){
     longitude <- cities$long[i]
     
     geocode.x <- paste0(latitude, "," , longitude, "," , radius)
-        
-        Sys.sleep(2.)    # Twitter API limit: 180 calls / 15 minutes = 12 seconds
+        # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
+        Sys.sleep(2.)    
         
         tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date)
         
@@ -162,58 +174,69 @@ I pull data for the top `r n.cities` cities (by population) in the U.S. This inc
 
 # Analysis
 
-Once collected, the data are lightly analyzed. Specifically the 'tweet.density', representing the number of tweets per million people per day ("twepermipeds"), is computed.
+Once collected, the data are lightly analyzed. Specifically the 'tweet.flux', representing the number of tweets per million people per day ("twipermipeds"), is computed.
 
 ```{r "analyze data", echo=TRUE}
 
 analyzed_df <- collected_df %>% 
-    mutate("tweet.density" = 10^6 * n.tweets/population/duration.days ) %>% 
-    select(name, lon, lat, tweet.density, n.tweets, population)
-
-
+    mutate("tweet.flux" = 10^6 * n.tweets/population/duration.days ) %>% 
+    select(name, lon, lat, tweet.flux, n.tweets, population)
 ```
 
 
 
 Collected data are put into  `collected_df`. For this first-pass analysis tweets are counted but are not cached. 
 
-# What is the Tweet Map?
+# So, what _does_ the Tweet-Map look like?
 
-Mapping uses the `{ggmap}` package. 
+Use the `{ggmap}` package to get a base Google map.
 
-```{r fig.align='center'}
-
-#, size = c(450, 340)
-
-library(ggmap)
+```{r echo = TRUE, fig.align='center'}
+    library(ggmap)
     map = get_googlemap(center =  c(lon = -95.58, lat = 36.83), 
               zoom = 3, size = c(390, 250), scale = 2, source = "google",
               maptype="roadmap") #, key = my.secret.key)
-
     map.plot <- ggmap(map)
+```
 
+After that standard `ggplot2` functions are used to plot the data. Note that several dimensions of data are shown. The latitude and longitude reprsent the geolocation of the town. The size of the point represents the number of tweets `n.tweets` and the shading of the dot represents the `tweet.flux` in "twipermipeds.""
 
-    map.plot + 
-    geom_point(aes(x = lon, y = lat, fill = tweet.density, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
-        ggtitle(paste0(searchString.x, " tweets for ", duration.days," days since ", since.date)) + 
-        scale_fill_gradient(low = "#BBBBFF", high = "#EE3300", space = "Lab", na.value = "grey50", guide = "colourbar")
+```{r echo=TRUE, fig.align='center'}
+map.plot +
+    geom_point(aes(x = lon, y = lat, fill = tweet.flux, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
+    ggtitle(paste0(searchString.x, " tweets for ", duration.days," days since ", since.date, " within ", radius, " of metro center")) +
+    scale_fill_gradient(low = "#BBBBFF", high = "#EE3300", space = "Lab", na.value = "grey50", guide = "colourbar")
 
 ```
 
-# What are the top cities by tweets and densities?
+# What are the top cities in #rstats?
 
-here are the top few cities by tweet density (tweet per million per day, or "twepermipeds")
+## AMB twipermipeds
+
+Here are the top few cities by tweet flux (in "twipermipeds").
 
 ```{r, results='asis'}
-print(xtable(head(analyzed_df[order(analyzed_df$tweet.density, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
+analyzed_df$population <- analyzed_df$population %>% as.integer
+
+print(xtable(head(analyzed_df[order(analyzed_df$tweet.flux, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-here are the top few cities sorted by raw tweets
+## AMB tweets
+
+Here are the top few cities sorted by raw tweets, again with major metro areas leading. Note that some other cities, like Chicago, have a large number of tweets but a lower flux because of their higher population.
 
 ```{r, results='asis'}
 print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
+# Summary  
+
+Using `#rstats` tweets, we find three metro areas, Boston, SF, and NYC lead in social discussions about __R__. This says little, directly, about overall data science, but it does indicate that heavy usage of a powerful data science tool is localized to a handful of US cities.   
+The results show short term instablity even within a period of hours, suggesting the methodology can be used to address other questions.    
+Normalizing the data is a key challenge. For instance it's likely many of the same tweets are captured for both Newark and Jersey City (since they are in close proximity) representing a double-counting that would alter the tweet flux measurement.  
+Things like metropolitain areas, "likely" users, numbers of startups and academic institutions, etc represent improvements to the methodology to be investigated.     
+> "twipermipeds" == definitely a thing.    
+  
 
 
 
