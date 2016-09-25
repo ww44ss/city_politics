@@ -1,7 +1,7 @@
 ---
-title: "Leading Cities in #rstats Twipermipeds"
+title: "Leading Cities in #deplorablelivesmatter Twipermipeds"
 author: "Winston Saunders"
-date: "September 22, 2016"
+date: "September 23, 2016"
 output: 
     html_document:
         css: markdown7.css
@@ -12,19 +12,9 @@ output:
 
 # Summary
 
-The question "what's the best city for data science?" was asked on the Sept ["Not So Standard Deviations"](https://www.patreon.com/NSSDeviations) podcast. To inject some analysis in the discussion, I used the `twitteR` package to measure interest in __R__ by computing the "flux" of tweets with the `#rstats` hashtag.   
-The top metro areas are New York, Boston, and the SF Bay area, with a tweet flux of about 50 #rstat tweets per million residents per day ("twipermipeds"). Other leading cities include Long Beach, Washington DC, Seattle, Raleigh NC, and Henderson NV.  
-Even Portland, Oregon (*yay*) weighs-in within the top 15 on tweets.
-Results are sensitive to assumptions about metro size and show some short term time dependency.   
-This was quick and dirty so no telling how stable the result will be over longer time.  
+Looks at #deplorableLivesMatter
 
-# Problem Statement
 
-In their September NSSD Podcast, Hilary and Roger discussed "_the best city for data science._" Let's try measuring something just to inject a little analysis into the discussion. 
-
-```{r setup, include=TRUE, echo=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align='center', comment = "")
-```
 
 
 ```{r libraries}
@@ -53,15 +43,18 @@ library(maps)
     options(scipen=999)
 ```
 
-# Where do I get data?
+```{r "set up tweet search", echo=TRUE}
 
-Twitter is a good source of data on "interest" in topics since it is both timely and social. 
+## set up search terms
+searchString.x <- "#deplorablelivesmatter"    # search term
+n.x <- 900                     # number of tweets
+radius <- "10mi"               # radius around selected geo-location
+duration.days <- 14             # how many days
+since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
 
-## Tweets, the Twitter API, and twitteR package.
+```
 
-Setting up the twitter API is relatively quick. 
-
-```{r "set up twitter API", echo=TRUE}
+```{r "set up twitter API", echo=FALSE}
 library(twitteR)
 ## create URLs
 reqURL <- "https://api.twitter.com/oauth/request_token"
@@ -80,20 +73,16 @@ accessTokenSecret <- keys$secret[4]
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 ```
 
-Test functionality with George Takei's latest tweet
 
-```{r echo = TRUE}
+
+```{r echo = FALSE}
 ## test functionanlity with georgetakei tweets
-userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
+#userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
 ```
 
-it works!  
+ 
 
-## City populations and geo-locations
-
-We'll also need to localize tweets to cities and thus need the lat and lon of major US cities. It's alos be nice to mormalize the data to population. It turns out sity coordinates and populations are available in the super-convenient  [`{maps}`](https://cran.r-project.org/web/packages/maps/index.html) package. 
-
-```{r echo=TRUE, results='asis'}
+```{r echo=FALSE, results='asis'}
 
     require(maps)
     cities <- us.cities
@@ -107,29 +96,20 @@ We'll also need to localize tweets to cities and thus need the lat and lon of ma
 
 ```
  
-According to the package, the top US cities by population are:  
+
 
 ```{r, results='asis'}
-print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
+#print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
-Looks right...
+
 
 ## Getting the tweets
 
 To get the tweet data use the `twitteR::searchTwiter` command. 
 Data collection is with the following variables. 
 
-```{r "set up tweet search", echo=TRUE}
 
-## set up search terms
-searchString.x <- "#rstats"    # search term
-n.x <- 900                     # number of tweets
-radius <- "10mi"               # radius around selected geo-location
-duration.days <- 14             # how many days
-since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
-
-```
 
 Note the radius of `r radius`, which is used to localize tweet collected around specific geo-locations.  For cases, where major cities are in close proximity, this certainly picks up some redundant tweets. More work needed here...
 
@@ -184,14 +164,11 @@ analyzed_df <- collected_df %>%
 ```
 
 
-
-Collected data are put into  `collected_df`. For this first-pass analysis tweets are counted but are not cached. 
-
 # So, what _does_ the Tweet-Map look like?
 
 Use the `{ggmap}` package to get a base Google map.
 
-```{r echo = TRUE, fig.align='center'}
+```{r echo = FALSE, fig.align='center'}
     library(ggmap)
     map = get_googlemap(center =  c(lon = -95.58, lat = 36.83), 
               zoom = 3, size = c(390, 250), scale = 2, source = "google",
@@ -209,7 +186,7 @@ map.plot +
 
 ```
 
-# What are the top cities in #rstats?
+# What are the top cities in `r searchString.x`?
 
 ## AMB twipermipeds
 
