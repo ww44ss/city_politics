@@ -96,6 +96,93 @@ setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
     cities <- cities[complete.cases(cities),] %>% as_data_frame
     ## sort
     cities <- cities[order(cities$pop, decreasing = TRUE), ]
+    
+    
+    MetroVector <- function(cities, city_name = "Los Angeles", state = "CA", longmin = -118.50, longmax = -117.1, latmax = 34.27, latmin = 33.27) {
+        
+        ##  function MetroVec
+        ##      computes metro area data
+        ##  inputs: 
+        ##      cities: tibble
+        ##      city_name a character vector of the output city name
+        ##      state a two letter designator
+        ##      longmin min lognitude
+        ##      longmx max longitude
+        ##      latmax max latitude
+        ##      latmin min latitude
+        ##  output:
+        ##      an updated tibble with the population sum within geo boundary
+        ##      and a geolocationweighted by population
+
+        
+        Metro <- filter(cities, long > longmin & long < longmax & lat < latmax & lat > latmin)
+        
+        ## compute sums and weighted locations
+        MetroPop <- sum(Metro$pop)
+        MetroLong <- sum(Metro$long * Metro$pop)/MetroPop %>% round(2)
+        LAMetroLat <- sum(Metro$lat * Metro$pop)/MetroPop %>% round(2)
+        
+        Metro_tibl <- tibble(name = city_name, coutry.etc = state, pop = LAMetroPop, lat = LAMetroLat, long = LAMetroLong, capital = 0 )
+        
+        cities.temp <- filter(cities, !(long > longmin & long < longmax & lat < latmax & lat > latmin))
+    
+        cities.temp <- rbind.tbl_df(cities.temp, MetroVec)
+        
+        return(cities.temp)
+        
+    }
+    
+    cities <- MetroVector(cities, "Los Angeles", "CA", longmin = -118.50, longmax = -117.1, latmax = 34.27, latmin = 33.27)
+    
+    cities <- MetroVector(cities, "San Diego", "CA", longmin = -117.29, longmax = -116.88, latmax = 32.92, latmin = 32.54)
+    
+    
+    
+        
+        NYMetro <- filter(cities, long > -118.50 & long < -117.1 & lat < 34.27 & lat > 33.27)
+    
+        NYMetroPop <- sum(NYMetro$pop)
+        MYMetroLong <- sum(LAMetro$long * LAMetro$pop)/LAMetroPop %>% round(2)
+        LAMetroLat <- sum(LAMetro$lat * LAMetro$pop)/LAMetroPop %>% round(2)
+        
+        LAMetroVec <- c("Los Angeles Metro CA", "CA", LAMetroPop, LAMetroLat, LAMetroLong, 0 )
+        
+        cities <- filter(cities, !(long > -118.50 & long < -117.1 & lat < 34.27 & lat > 33.27))
+    
+        cities <- rbind(LAMetroVec, cities)   
+        
+    
+    ## compute for metro areas
+    LAMetroPop <- cities$pop[cities$city_name == "Los Angeles" ] +
+        cities$pop[cities$city_name == "Irvine" ] +
+        cities$pop[cities$city_name == "Glendale" ] +
+        cities$pop[cities$city_name == "Riverside" ] + 
+        cities$pop[cities$city_name == "Santa Ana" ] + 
+        cities$pop[cities$city_name == "Anaheim" ] +
+        cities$pop[cities$city_name == "Glendale" ] +
+        cities$pop[cities$city_name == "Newport Beach" ] +
+        cities$pop[cities$city_name == "Lake Forest" ] +
+        cities$pop[cities$city_name == "Rancho Santa Margarita" ] +
+        cities$pop[cities$city_name == "Costa Mesa" ] +
+        cities$pop[cities$city_name == "Lake Elsinore" ] +
+        cities$pop[cities$city_name == "La Quinta" ] +
+        cities$pop[cities$city_name == "Huntington Beach" ] +
+        cities$pop[cities$city_name == "Glendale" ] +
+        cities$pop[cities$city_name == "Glendale" ]
+    
+    SanDiegoMetro <-  
+        cities$pop[cities$city_name == "Chula Vista" ] + 
+        cities$pop[cities$city_name == "San Diego" ] + 
+        cities$pop[cities$city_name == "National City" ] +
+        cities$pop[cities$city_name == "La Mesa" ] +
+        cities$pop[cities$city_name == "El Cajon" ] +
+        cities$pop[cities$city_name == "Santee" ] +
+        cities$pop[cities$city_name == "Poway" ] +
+        cities$pop[cities$city_name == "Encinitas" ] +
+        cities$pop[cities$city_name == "Carlsbad" ]
+        
+        
+    
 
 ```
  
@@ -124,7 +211,16 @@ for (i in 1:n.cities){
     latitude <- cities$lat[i]
     longitude <- cities$long[i]
     
-    geocode.x <- paste0(latitude, "," , longitude, "," , radius)
+    ## increase search radius for these cities
+    temp.radius <- radius
+    if (cities$city_name == "New York") temp.radius <- 20
+    if (cities$city_name == "Los Angeles") temp.radius <- 30
+    if (cities$city_name == "San Francisco") temp.radius <- 20
+    if (cities$city_name == "WASHINGTON") temp.radius <- 20
+    
+    
+    
+    geocode.x <- paste0(latitude, "," , longitude, "," , temp.radius)
         # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
         Sys.sleep(4.)    
         

@@ -2,7 +2,7 @@
 Winston Saunders  
 September 23, 2016  
 
-# get Tweets
+# setup
 
 
 
@@ -13,14 +13,14 @@ September 23, 2016
 
 ```r
 ## set up search terms
-searchString.x <- "#MAGA"    # search term
+searchString.x <- "#GenniferFlowers"    # search term
 n.x <- 3000                     # number of tweets
 radius <- "10mi"               # radius around selected geo-location
 duration.days <- 1             # how many days
 since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
 ```
 
-looking at #MAGA for geo preference.
+# #GenniferFlowers geo-preference.
 
 
 ```
@@ -39,41 +39,18 @@ looking at #MAGA for geo preference.
 
 
 
-To get the tweet data use the `twitteR::searchTwiter` command. 
-Data collection is with the following variables. 
-
+Use the `twitteR::searchTwitter` command. 
 
 
 ```r
 n.cities <- 100
 ```
 
-```
-[1] "Rate limited .... blocking for a minute and retrying up to 119 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 118 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 117 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 116 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 115 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 114 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 113 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 112 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 111 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 110 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 119 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 118 times ..."
-[1] "Rate limited .... blocking for a minute and retrying up to 117 times ..."
-```
-
-Data for the top 100 cities (by population) in the U.S. This includes cities from New York NY to Irvine CA.
+Data collection for the top 100 cities (by population) in the U.S. This includes cities from New York NY to Irvine CA.
 
 
 
-
-
-
-# Tweet-Map for #MAGA?
-
-
+# Tweet-Map for #GenniferFlowers?
 
 
 
@@ -90,7 +67,7 @@ map.plot +
 
 
 
-## AMB tweet-flux
+## #GenniferFlowers AMB tweet-flux
 
 Here are the top few cities by tweet flux (in "twipermipeds").
 
@@ -98,24 +75,24 @@ Here are the top few cities by tweet flux (in "twipermipeds").
 <!--  -->
 <table border=1>
 <tr> <th> name </th> <th> tweet.flux </th> <th> n.tweets </th> <th> population </th>  </tr>
-  <tr> <td> Jersey City NJ </td> <td align="right"> 12651.56 </td> <td align="right"> 3000 </td> <td align="right"> 237125 </td> </tr>
-  <tr> <td> Newark NJ </td> <td align="right"> 10661.81 </td> <td align="right"> 3000 </td> <td align="right"> 281378 </td> </tr>
-  <tr> <td> Hialeah FL </td> <td align="right"> 8279.77 </td> <td align="right"> 1860 </td> <td align="right"> 224644 </td> </tr>
-  <tr> <td> Glendale CA </td> <td align="right"> 6969.58 </td> <td align="right"> 1427 </td> <td align="right"> 204747 </td> </tr>
-  <tr> <td> Atlanta GA </td> <td align="right"> 4921.06 </td> <td align="right"> 2087 </td> <td align="right"> 424096 </td> </tr>
-  <tr> <td> Miami FL </td> <td align="right"> 4729.28 </td> <td align="right"> 1829 </td> <td align="right"> 386740 </td> </tr>
-  <tr> <td> WASHINGTON DC </td> <td align="right"> 3043.63 </td> <td align="right"> 1669 </td> <td align="right"> 548359 </td> </tr>
-  <tr> <td> Paradise NV </td> <td align="right"> 2736.92 </td> <td align="right"> 605 </td> <td align="right"> 221051 </td> </tr>
-  <tr> <td> Louisville KY </td> <td align="right"> 1862.51 </td> <td align="right"> 449 </td> <td align="right"> 241072 </td> </tr>
-  <tr> <td> Las Vegas NV </td> <td align="right"> 980.49 </td> <td align="right"> 543 </td> <td align="right"> 553807 </td> </tr>
-  <tr> <td> Chula Vista CA </td> <td align="right"> 717.07 </td> <td align="right"> 159 </td> <td align="right"> 221736 </td> </tr>
-  <tr> <td> Detroit MI </td> <td align="right"> 532.24 </td> <td align="right"> 464 </td> <td align="right"> 871789 </td> </tr>
-  <tr> <td> Oakland CA </td> <td align="right"> 482.68 </td> <td align="right"> 190 </td> <td align="right"> 393632 </td> </tr>
-  <tr> <td> Boston MA </td> <td align="right"> 433.28 </td> <td align="right"> 246 </td> <td align="right"> 567759 </td> </tr>
-  <tr> <td> Cleveland OH </td> <td align="right"> 387.43 </td> <td align="right"> 172 </td> <td align="right"> 443949 </td> </tr>
+  <tr> <td> Jersey City NJ </td> <td align="right"> 611.49 </td> <td align="right"> 145 </td> <td align="right"> 237125 </td> </tr>
+  <tr> <td> WASHINGTON DC </td> <td align="right"> 481.44 </td> <td align="right"> 264 </td> <td align="right"> 548359 </td> </tr>
+  <tr> <td> Newark NJ </td> <td align="right"> 447.80 </td> <td align="right"> 126 </td> <td align="right"> 281378 </td> </tr>
+  <tr> <td> Glendale CA </td> <td align="right"> 405.38 </td> <td align="right">  83 </td> <td align="right"> 204747 </td> </tr>
+  <tr> <td> Virginia Beach VA </td> <td align="right"> 81.52 </td> <td align="right">  37 </td> <td align="right"> 453884 </td> </tr>
+  <tr> <td> Oakland CA </td> <td align="right"> 66.05 </td> <td align="right">  26 </td> <td align="right"> 393632 </td> </tr>
+  <tr> <td> Chula Vista CA </td> <td align="right"> 63.14 </td> <td align="right">  14 </td> <td align="right"> 221736 </td> </tr>
+  <tr> <td> Boston MA </td> <td align="right"> 56.36 </td> <td align="right">  32 </td> <td align="right"> 567759 </td> </tr>
+  <tr> <td> Tampa FL </td> <td align="right"> 51.74 </td> <td align="right">  17 </td> <td align="right"> 328578 </td> </tr>
+  <tr> <td> Hialeah FL </td> <td align="right"> 44.51 </td> <td align="right">  10 </td> <td align="right"> 224644 </td> </tr>
+  <tr> <td> Orlando FL </td> <td align="right"> 42.61 </td> <td align="right">   9 </td> <td align="right"> 211226 </td> </tr>
+  <tr> <td> San Francisco CA </td> <td align="right"> 34.54 </td> <td align="right">  25 </td> <td align="right"> 723724 </td> </tr>
+  <tr> <td> Seattle WA </td> <td align="right"> 33.31 </td> <td align="right">  19 </td> <td align="right"> 570430 </td> </tr>
+  <tr> <td> Miami FL </td> <td align="right"> 25.86 </td> <td align="right">  10 </td> <td align="right"> 386740 </td> </tr>
+  <tr> <td> Los Angeles CA </td> <td align="right"> 25.05 </td> <td align="right">  98 </td> <td align="right"> 3911500 </td> </tr>
    </table>
 
-## AMB tweet count
+## #GenniferFlowers AMB tweet count
 
 Here are the top few cities sorted by raw tweets, again with major metro areas leading. Note that some other cities, like Chicago, have a large number of tweets but a lower flux because of their higher population.
 
@@ -123,21 +100,21 @@ Here are the top few cities sorted by raw tweets, again with major metro areas l
 <!--  -->
 <table border=1>
 <tr> <th> name </th> <th> tweet.flux </th> <th> n.tweets </th> <th> population </th>  </tr>
-  <tr> <td> New York NY </td> <td align="right"> 369.26 </td> <td align="right"> 3000 </td> <td align="right"> 8124427 </td> </tr>
-  <tr> <td> Newark NJ </td> <td align="right"> 10661.81 </td> <td align="right"> 3000 </td> <td align="right"> 281378 </td> </tr>
-  <tr> <td> Jersey City NJ </td> <td align="right"> 12651.56 </td> <td align="right"> 3000 </td> <td align="right"> 237125 </td> </tr>
-  <tr> <td> Atlanta GA </td> <td align="right"> 4921.06 </td> <td align="right"> 2087 </td> <td align="right"> 424096 </td> </tr>
-  <tr> <td> Hialeah FL </td> <td align="right"> 8279.77 </td> <td align="right"> 1860 </td> <td align="right"> 224644 </td> </tr>
-  <tr> <td> Miami FL </td> <td align="right"> 4729.28 </td> <td align="right"> 1829 </td> <td align="right"> 386740 </td> </tr>
-  <tr> <td> WASHINGTON DC </td> <td align="right"> 3043.63 </td> <td align="right"> 1669 </td> <td align="right"> 548359 </td> </tr>
-  <tr> <td> Los Angeles CA </td> <td align="right"> 378.37 </td> <td align="right"> 1480 </td> <td align="right"> 3911500 </td> </tr>
-  <tr> <td> Glendale CA </td> <td align="right"> 6969.58 </td> <td align="right"> 1427 </td> <td align="right"> 204747 </td> </tr>
-  <tr> <td> Paradise NV </td> <td align="right"> 2736.92 </td> <td align="right"> 605 </td> <td align="right"> 221051 </td> </tr>
-  <tr> <td> Las Vegas NV </td> <td align="right"> 980.49 </td> <td align="right"> 543 </td> <td align="right"> 553807 </td> </tr>
-  <tr> <td> Detroit MI </td> <td align="right"> 532.24 </td> <td align="right"> 464 </td> <td align="right"> 871789 </td> </tr>
-  <tr> <td> Louisville KY </td> <td align="right"> 1862.51 </td> <td align="right"> 449 </td> <td align="right"> 241072 </td> </tr>
-  <tr> <td> Phoenix AZ </td> <td align="right"> 184.03 </td> <td align="right"> 267 </td> <td align="right"> 1450884 </td> </tr>
-  <tr> <td> Boston MA </td> <td align="right"> 433.28 </td> <td align="right"> 246 </td> <td align="right"> 567759 </td> </tr>
+  <tr> <td> WASHINGTON DC </td> <td align="right"> 481.44 </td> <td align="right"> 264 </td> <td align="right"> 548359 </td> </tr>
+  <tr> <td> New York NY </td> <td align="right"> 17.97 </td> <td align="right"> 146 </td> <td align="right"> 8124427 </td> </tr>
+  <tr> <td> Jersey City NJ </td> <td align="right"> 611.49 </td> <td align="right"> 145 </td> <td align="right"> 237125 </td> </tr>
+  <tr> <td> Newark NJ </td> <td align="right"> 447.80 </td> <td align="right"> 126 </td> <td align="right"> 281378 </td> </tr>
+  <tr> <td> Los Angeles CA </td> <td align="right"> 25.05 </td> <td align="right">  98 </td> <td align="right"> 3911500 </td> </tr>
+  <tr> <td> Glendale CA </td> <td align="right"> 405.38 </td> <td align="right">  83 </td> <td align="right"> 204747 </td> </tr>
+  <tr> <td> Virginia Beach VA </td> <td align="right"> 81.52 </td> <td align="right">  37 </td> <td align="right"> 453884 </td> </tr>
+  <tr> <td> Philadelphia PA </td> <td align="right"> 25.00 </td> <td align="right">  36 </td> <td align="right"> 1439814 </td> </tr>
+  <tr> <td> Boston MA </td> <td align="right"> 56.36 </td> <td align="right">  32 </td> <td align="right"> 567759 </td> </tr>
+  <tr> <td> Chicago IL </td> <td align="right"> 10.95 </td> <td align="right">  31 </td> <td align="right"> 2830144 </td> </tr>
+  <tr> <td> Oakland CA </td> <td align="right"> 66.05 </td> <td align="right">  26 </td> <td align="right"> 393632 </td> </tr>
+  <tr> <td> San Francisco CA </td> <td align="right"> 34.54 </td> <td align="right">  25 </td> <td align="right"> 723724 </td> </tr>
+  <tr> <td> Seattle WA </td> <td align="right"> 33.31 </td> <td align="right">  19 </td> <td align="right"> 570430 </td> </tr>
+  <tr> <td> Tampa FL </td> <td align="right"> 51.74 </td> <td align="right">  17 </td> <td align="right"> 328578 </td> </tr>
+  <tr> <td> Dallas TX </td> <td align="right"> 13.15 </td> <td align="right">  16 </td> <td align="right"> 1216543 </td> </tr>
    </table>
 
   
