@@ -86,7 +86,6 @@ setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
  
 
 ```{r echo=FALSE, results='asis'}
-
     require(maps)
     cities <- us.cities
     
@@ -137,9 +136,7 @@ setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
     cities <- MetroVector(cities, "Los Angeles", "CA", longmin = -118.50, longmax = -117.1, latmax = 34.27, latmin = 33.27)
     
     cities <- MetroVector(cities, "San Diego", "CA", longmin = -117.29, longmax = -116.88, latmax = 32.92, latmin = 32.54)
-    
-    
-    
+
         
         NYMetro <- filter(cities, long > -118.50 & long < -117.1 & lat < 34.27 & lat > 33.27)
     
@@ -205,13 +202,14 @@ library(leaderCluster)
 
 ## find clusters
 set.seed(8675309)
-city_cluster <- leaderCluster(cities[, 4:5], radius = 2.5, distance = "L2")
-
-
-length(city_cluster)
+city_cluster <- leaderCluster(cities[, 4:5], radius = 1.8, distance = "L2")
 
 l_clust <- city_cluster$cluster_centroids %>% as_data_frame()
 colnames(l_clust) <- c("lat", "long")
+
+cities_verify <- bind_cols(cities, city_cluster$cluster_id %>% as_data_frame)
+
+
 
 ```
 
@@ -229,9 +227,17 @@ colnames(l_clust) <- c("lat", "long")
 
 ```{r echo=TRUE, fig.align='center'}
 map.plot +
-    geom_point(aes(x = long, y = lat), data=l_clust, pch=2, color = "lightred") 
+    geom_point(aes(x = long, y = lat), data=l_clust, color = "red") 
 
 ```
+
+```{r}
+map.plot +
+    geom_point(aes(x = long, y = lat, color = factor(value)), data=cities_verify) +
+    geom_point(aes(x = long, y = lat), data=l_clust, color = "black", size = 3, alpha = 0.6) 
+```
+
+
 
 ```{r}
 
