@@ -50,8 +50,9 @@ library(maps)
 searchString.x <- "#TrumpWon"    # search term
 n.x <- 3000                     # number of tweets
 radius <- "30mi"               # radius around selected geo-location
+days.ago <-7
 duration.days <- 1             # how many days
-since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
+since.date <- (Sys.Date() - days.ago) %>% as.character # calculated starting date
 
 ```
 
@@ -92,7 +93,7 @@ Get city geo data from `maps::cities`
     cities <- us.cities
     
     ## create city_name by removing state designnator 
-    ## and clean up certain names for later join
+    ## abreviate Saint and correct a spelling error.
     cities <- cities %>% 
         mutate(city_name = gsub(' [A-Z]{2,}','', name)) %>%
         mutate(city_name = gsub('Saint', 'St.', city_name)) %>%
@@ -102,7 +103,7 @@ Get city geo data from `maps::cities`
     cities <- cities[complete.cases(cities),] %>% as_data_frame
     ## sort
     cities <- cities[order(cities$pop, decreasing = TRUE), ]
-    
+    ## create a metro_match column for joining and get rid of capital
     cities <- cities %>% 
         mutate(metro_match = city_name %>% tolower) %>% 
         select(-capital) 
@@ -117,10 +118,6 @@ Get city geo data from `maps::cities`
     metro_data <- metro_data %>% 
         as_data_frame %>% 
         select(-X) %>%
-        mutate(metro = gsub('Boise City', 'Boise', metro)) %>%
-        mutate(metro = gsub('Urban ', '', metro)) %>%
-        mutate(metro = gsub('^York', 'Harrisburg', metro)) %>%
-        mutate(metro = gsub('Winston', 'Winston-Salem', metro)) %>%
         mutate(metro_match = tolower(metro))
     
 
@@ -133,16 +130,21 @@ Get city geo data from `maps::cities`
     metro_cities <- left_join(metro_data, cities, by = "metro_match")
 
     metros <- metro_cities[complete.cases(metro_cities),]
-    ## as a quality check nothing below #120
+    ## keep first 100
+    metro_area_tibble <- metros %>% filter(rank <= 100)
+    ## as a quality check nothing less than #120.
+    ## there is still work to be done on 
     bad_metros <- metro_cities[!complete.cases(metro_cities),]
 ```
 
 
 ```{r}
-
-## to make legacy code work assign to variable name cities
-cities <- metros
+    ## to make legacy code work assign to variable name `cities`
+    cities <- metro_area_tibble
 ```
+
+
+Keeping first 100 metro areas comprises a total population of `r (sum(cities$population)/10^6) %>% round(1)` million people. 
 
 ```{r, results='asis'}
 #print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
@@ -150,11 +152,19 @@ cities <- metros
 
 Use the `twitteR::searchTwitter` command. 
 
+Select number of cities
+
+```{r echo = 2, "get tweets", message=FALSE, warning=FALSE}
+## pick number of metro areas to interrogate
+    n.cities <- 40
+    if (n.cities > nrow(cities)) n.cities <- nrow(cities)
+```
+
+This comprises a total of `r (sum(cities$population[1:n.cities])/10^6) %>% round(1)` million people.
+
 ```{r echo = 1, "get tweets", message=FALSE, warning=FALSE}
-n.cities <- 40
 
-if (n.cities > nrow(cities)) n.cities <- nrow(cities)
-
+## create dataframe for storing data
 collected_df <- data_frame("n" = 1:n.cities, 
                            "lat" = rep_len(1., n.cities),
                            "lon" = rep_len(1., n.cities),
@@ -163,16 +173,20 @@ collected_df <- data_frame("n" = 1:n.cities,
                            "population" = rep_len(1., n.cities),
                            "name" = rep_len("a", n.cities))
 
+## loop thru cities to get data
+## this takes some time
 for (i in 1:n.cities){
     latitude <- cities$lat[i]
     longitude <- cities$long[i]
     
     geocode.x <- paste0(latitude, "," , longitude, "," , radius)
-        # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
-        Sys.sleep(4.)    
-        
-        tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date, retryOnRateLimit=120)
-        
+    
+    # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
+    Sys.sleep(4.)    
+    ## get the tweets
+    tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date, retryOnRateLimit=120)
+    
+    ## assign to data frame   
         collected_df[i,1] <- i
         collected_df[i,2] <- latitude
         collected_df[i,3] <- longitude
@@ -202,7 +216,7 @@ analyzed_df <- collected_df %>%
     
     map = get_googlemap(center =  c(lon = -95.58, lat = 36.83),
             zoom = 3, size = c(390, 250), scale = 2, source = "google",
-            maptype="roadmap") #, key = my.secret.key)
+            maptype="roadmap", color = "bw" ) #, key = my.secret.key)
     map.plot <- ggmap(map)
 
 ```
