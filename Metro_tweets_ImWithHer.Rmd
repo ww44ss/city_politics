@@ -1,5 +1,5 @@
 ---
-title: "Leading Metro Areas with #rstats tweet flux"
+title: "Leading Metro Areas with #MAGA tweet flux"
 author: "Winston Saunders"
 date: "September 23, 2016"
 output: 
@@ -47,7 +47,7 @@ library(maps)
 ```{r "set up tweet search", echo=TRUE}
 
 ## set up search terms
-searchString.x <- "#rstats"    # search term
+searchString.x <- "#MAGA"    # search term
 n.x <- 3000                     # number of tweets
 radius <- "30mi"               # radius around selected geo-location
 duration.days <- 1             # how many days
@@ -147,7 +147,7 @@ cities <- metros
 Use the `twitteR::searchTwitter` command. 
 
 ```{r echo = 1, "get tweets", message=FALSE, warning=FALSE}
-n.cities <- 10
+n.cities <- 20
 
 if (n.cities > nrow(cities)) n.cities <- nrow(cities)
 

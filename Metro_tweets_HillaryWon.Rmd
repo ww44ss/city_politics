@@ -1,5 +1,5 @@
 ---
-title: "Leading Metro Areas with #rstats tweet flux"
+title: "Leading Metro Areas with #HillaryWon tweet flux"
 author: "Winston Saunders"
 date: "September 23, 2016"
 output: 
@@ -47,7 +47,7 @@ library(maps)
 ```{r "set up tweet search", echo=TRUE}
 
 ## set up search terms
-searchString.x <- "#rstats"    # search term
+searchString.x <- "#HillaryWon"    # search term
 n.x <- 3000                     # number of tweets
 radius <- "30mi"               # radius around selected geo-location
 duration.days <- 1             # how many days
@@ -87,6 +87,8 @@ Get city geo data from `maps::cities`
 
 ```{r echo=FALSE, results='asis'}
     require(maps)
+
+    ## use maps data for geo-location
     cities <- us.cities
     
     ## create city_name by removing state designnator 
@@ -109,7 +111,8 @@ Get city geo data from `maps::cities`
 ```
 
 ```{r}
-    ## get metro data
+    ## Use wikipedia data for metro polulations
+
     metro_data <- read.csv("/users/winstonsaunders/documents/city_politics/metro_pop_table_2015.csv")
     metro_data <- metro_data %>% 
         as_data_frame %>% 
@@ -124,7 +127,8 @@ Get city geo data from `maps::cities`
 ```
 
 ```{r}
-    
+    ## merge datasets    
+
     library(stats)
     metro_cities <- left_join(metro_data, cities, by = "metro_match")
 
@@ -147,7 +151,7 @@ cities <- metros
 Use the `twitteR::searchTwitter` command. 
 
 ```{r echo = 1, "get tweets", message=FALSE, warning=FALSE}
-n.cities <- 10
+n.cities <- 40
 
 if (n.cities > nrow(cities)) n.cities <- nrow(cities)
 
@@ -174,8 +178,8 @@ for (i in 1:n.cities){
         collected_df[i,3] <- longitude
         #collected_df[i,4] <- tweets
         collected_df[i,5] <- length(tweets)
-        collected_df[i,6] <- cities$pop[i]
-        collected_df[i,7] <- cities$name[i]
+        collected_df[i,6] <- cities$population[i]
+        collected_df[i,7] <- cities$metro[i]
     }
 
 

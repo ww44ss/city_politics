@@ -1,6 +1,7 @@
 ## Get wikipedia page of metro populations
 ## Winston Saunders Sept 18 2016
 ##    rev 0.1 Sept 28 2016 modified grep to include m-dash and fwd slash
+##    rev 0.2 Sept 30 2016 cleaned a few names
 ##
 ## reads wikipedia page 
 ## gets table
@@ -42,7 +43,13 @@ content$change <- as.character(content$change)
 content$pop_2015 <- gsub("," , "", content$pop_2015)
 content$pop_2010 <- gsub("," , "", content$pop_2010)
 # clean metro names
-content <- content %>% mutate(metro = gsub('(/|–|-|,).*', "",metro_stat_area))
+content <- content %>% mutate(metro = gsub('(/|–|-|,).*', "",metro_stat_area)) %>%
+    mutate(metro = gsub('Boise City', 'Boise', metro)) %>%
+    mutate(metro = gsub('Urban ', '', metro)) %>%
+    mutate(metro = gsub('^York', 'Harrisburg', metro)) %>%
+    mutate(metro = gsub('Winston', 'Winston-Salem', metro))
+
+
 # convert population to numeric data
 content <- content %>% mutate(population = as.numeric(pop_2015))
 # cbind desired clean data
