@@ -10,7 +10,12 @@ output:
         keep_md: true
 ---
 
-# `#TrumpWon`
+# Rev
+    0.1 1 Oct 2016 add ChoroplethRmaps to make data appear cleaner
+
+# Set-up
+
+
 
 
 ```{r setup, include=TRUE, echo=FALSE}
@@ -31,32 +36,21 @@ library(xtable)
     options(xtable.timestamp = "")
 
 library(googleway)
-
 library(tidyr)
 library(stringr)
-
 library(gridExtra)
 library(twitteR)
 require(plyr)
 library(methods)
 library(maps)
+
+    library(choroplethrMaps)
+    
+library(RSQLite)
     
     options(scipen=999)
 ```
 
-```{r "set up tweet search", echo=TRUE}
-
-## set up search terms
-searchString.x <- "#TrumpWon"    # search term
-n.x <- 3000                     # number of tweets
-radius <- "30mi"               # radius around selected geo-location
-days.ago <-7
-duration.days <- 1             # how many days
-since.date <- (Sys.Date() - days.ago) %>% as.character # calculated starting date
-
-```
-
-# `r searchString.x` geo-preference.
 
 ```{r "set up twitter API", echo=FALSE, message=FALSE, warning=FALSE}
 library(twitteR)
@@ -77,14 +71,11 @@ accessTokenSecret <- keys$secret[4]
 setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 ```
 
-
-
-```{r echo = FALSE}
-## test functionanlity with georgetakei tweets
-#userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
-```
-
 Get city geo data from `maps::cities`
+
+```{r}
+data(state.map)
+```
 
 ```{r echo=FALSE, results='asis'}
     require(maps)
@@ -93,7 +84,7 @@ Get city geo data from `maps::cities`
     cities <- us.cities
     
     ## create city_name by removing state designnator 
-    ## abreviate Saint and correct a spelling error.
+    ## abbreviate Saint and correct a spelling error.
     cities <- cities %>% 
         mutate(city_name = gsub(' [A-Z]{2,}','', name)) %>%
         mutate(city_name = gsub('Saint', 'St.', city_name)) %>%
@@ -110,6 +101,7 @@ Get city geo data from `maps::cities`
 
     
 ```
+
 
 ```{r}
     ## Use wikipedia data for metro polulations
@@ -130,21 +122,58 @@ Get city geo data from `maps::cities`
     metro_cities <- left_join(metro_data, cities, by = "metro_match")
 
     metros <- metro_cities[complete.cases(metro_cities),]
-    ## keep first 100
-    metro_area_tibble <- metros %>% filter(rank <= 100)
-    ## as a quality check nothing less than #120.
-    ## there is still work to be done on 
     bad_metros <- metro_cities[!complete.cases(metro_cities),]
+```
+
+Select number of cities
+
+```{r echo = 2, "get tweets", message=FALSE, warning=FALSE}
+## pick number of metro areas to interrogate
+    n.cities <- 20
+    if (n.cities > nrow(cities)) n.cities <- nrow(cities)
 ```
 
 
 ```{r}
+    metro_area_tibble <- metros %>% filter(rank <= n.cities)
+    ## as a quality check nothing less than #120.
+    ## there is still work to be done on 
+
     ## to make legacy code work assign to variable name `cities`
     cities <- metro_area_tibble
+
+```
+
+Data collection for the top `r n.cities` cities (by population) in the U.S. This includes cities from `r cities$name[1]` to `r cities$name[n.cities]`.
+
+Keeping first `r n.cities` metro areas comprises a total population of `r (sum(cities$population)/10^6) %>% round(1)` million people. 
+
+
+
+
+## search
+
+```{r "set up tweet search", echo=TRUE}
+
+## set up search terms
+searchString.x <- "#ImWithHer"    # search term
+n.x <- 3000                     # number of tweets
+radius <- "30mi"               # radius around selected geo-location
+days.ago <-4
+duration.days <- 3             # how many days
+since.date <- (Sys.Date() - days.ago) %>% as.character # calculated starting date
+until.date <- (Sys.Date() - days.ago + duration.days) %>% as.character # calculated ending date
+
+```
+
+# `r searchString.x` geo-preference.
+
+```{r echo = FALSE}
+## test functionanlity with georgetakei tweets
+#userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
 ```
 
 
-Keeping first 100 metro areas comprises a total population of `r (sum(cities$population)/10^6) %>% round(1)` million people. 
 
 ```{r, results='asis'}
 #print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
@@ -152,17 +181,8 @@ Keeping first 100 metro areas comprises a total population of `r (sum(cities$pop
 
 Use the `twitteR::searchTwitter` command. 
 
-Select number of cities
 
-```{r echo = 2, "get tweets", message=FALSE, warning=FALSE}
-## pick number of metro areas to interrogate
-    n.cities <- 40
-    if (n.cities > nrow(cities)) n.cities <- nrow(cities)
-```
-
-This comprises a total of `r (sum(cities$population[1:n.cities])/10^6) %>% round(1)` million people.
-
-```{r echo = 1, "get tweets", message=FALSE, warning=FALSE}
+```{r echo = 1, "get tweets1", message=FALSE, warning=FALSE}
 
 ## create dataframe for storing data
 collected_df <- data_frame("n" = 1:n.cities, 
@@ -184,7 +204,7 @@ for (i in 1:n.cities){
     # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
     Sys.sleep(4.)    
     ## get the tweets
-    tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date, retryOnRateLimit=120)
+    tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date, until = until.date, retryOnRateLimit=120)
     
     ## assign to data frame   
         collected_df[i,1] <- i
@@ -193,14 +213,14 @@ for (i in 1:n.cities){
         #collected_df[i,4] <- tweets
         collected_df[i,5] <- length(tweets)
         collected_df[i,6] <- cities$population[i]
-        collected_df[i,7] <- cities$metro[i]
+        collected_df[i,7] <- cities$name[i]
     }
 
 
 
 ```
 
-Data collection for the top `r n.cities` cities (by population) in the U.S. This includes cities from `r collected_df$name[1]` to `r collected_df$name[n.cities]`.
+
 
 ```{r "analyze data", echo=FALSE}
 
@@ -216,17 +236,20 @@ analyzed_df <- collected_df %>%
     
     map = get_googlemap(center =  c(lon = -95.58, lat = 36.83),
             zoom = 3, size = c(390, 250), scale = 2, source = "google",
-            maptype="roadmap", color = "bw" ) #, key = my.secret.key)
+            maptype="roadmap", color = "bw", alpha = 0.1 ) #, key = my.secret.key)
     map.plot <- ggmap(map)
 
 ```
 
 
 ```{r echo=TRUE, fig.align='center'}
-map.plot +
+    map.plot +  ## use this to underlay with google map
+    #ggplot() +   ## use this to underlay with simple border outlines
+    geom_polygon(data = state.map %>% filter(region != "alaska" & region != "hawaii"), aes(x=long, y=lat, group = group), fill = NA, color = "#36180D") +
     geom_point(aes(x = lon, y = lat, fill = tweet.flux, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
-    ggtitle(paste0(searchString.x, " tweets in ", duration.days," days since ", since.date, " r = ", radius)) +
-    scale_fill_gradient(low = "#BBBBFF", high = "#EE3300", space = "Lab", na.value = "grey50", guide = "colourbar")
+    ggtitle(paste0(searchString.x, " tweets from ", since.date, " until ", until.date)) +
+    scale_fill_gradient(low = "#92A0CD", high = "#B32F2A", space = "Lab", na.value = "grey50", guide = "colourbar") +
+        theme_bw()
 
 ```
 
@@ -239,7 +262,7 @@ Here are the top few cities by tweet flux (in "twipermipeds").
 ```{r, results='asis'}
 analyzed_df$population <- analyzed_df$population %>% as.integer
 
-print(xtable(head(analyzed_df[order(analyzed_df$tweet.flux, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
+print(xtable(head(analyzed_df[order(analyzed_df$tweet.flux, decreasing = TRUE),], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
 ## `r searchString.x` AMB tweet count
@@ -247,202 +270,10 @@ print(xtable(head(analyzed_df[order(analyzed_df$tweet.flux, decreasing = TRUE),c
 Here are the top few cities sorted by raw tweets, again with major metro areas leading. Note that some other cities, like Chicago, have a large number of tweets but a lower flux because of their higher population.
 
 ```{r, results='asis'}
-print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
-```
-
-# `#HillaryWon` 
-  
-```{r "set up tweet search", echo=TRUE}
-
-## set up search terms
-searchString.x <- "#TrumpWon"    # search term
-n.x <- 3000                     # number of tweets
-radius <- "30mi"               # radius around selected geo-location
-duration.days <- 1             # how many days
-since.date <- (Sys.Date() - duration.days) %>% as.character # calculated starting date
-
-```
-
-# `r searchString.x` geo-preference.
-
-```{r "set up twitter API", echo=FALSE, message=FALSE, warning=FALSE}
-library(twitteR)
-## create URLs
-reqURL <- "https://api.twitter.com/oauth/request_token"
-accessURL <- "https://api.twitter.com/oauth/access_token"
-authURL <- "https://api.twitter.com/oauth/authorize"
-
-## read file containing secret keys (obtained from apps.twitter.com)
-keys <- read.table("/users/winstonsaunders/documents/city_politics/secret_t.key.txt", stringsAsFactors = FALSE, col.names = "secret" )
-## convert to characters (read.table coerces to a factor)
-consumerKey       <- keys$secret[1] 
-consumerSecret    <- keys$secret[2] 
-accessToken       <- keys$secret[3] 
-accessTokenSecret <- keys$secret[4] 
-
-## set up authentication
-setup_twitter_oauth(consumerKey, consumerSecret, accessToken, accessTokenSecret)
+print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
 ```
 
 
-
-```{r echo = FALSE}
-## test functionanlity with georgetakei tweets
-#userTimeline(getUser('georgetakei'), n=1, includeRts=FALSE, excludeReplies=FALSE)[[1]]
-```
-
-Get city geo data from `maps::cities`
-
-```{r echo=FALSE, results='asis'}
-    require(maps)
-
-    ## use maps data for geo-location
-    cities <- us.cities
-    
-    ## create city_name by removing state designnator 
-    ## and clean up certain names for later join
-    cities <- cities %>% 
-        mutate(city_name = gsub(' [A-Z]{2,}','', name)) %>%
-        mutate(city_name = gsub('Saint', 'St.', city_name)) %>%
-        mutate(city_name = gsub('MacAllen', 'McAllen', city_name)) 
-    
-    ## clean
-    cities <- cities[complete.cases(cities),] %>% as_data_frame
-    ## sort
-    cities <- cities[order(cities$pop, decreasing = TRUE), ]
-    
-    cities <- cities %>% 
-        mutate(metro_match = city_name %>% tolower) %>% 
-        select(-capital) 
-
-    
-```
-
-```{r}
-    ## Use wikipedia data for metro polulations
-
-    metro_data <- read.csv("/users/winstonsaunders/documents/city_politics/metro_pop_table_2015.csv")
-    metro_data <- metro_data %>% 
-        as_data_frame %>% 
-        select(-X) %>%
-        mutate(metro = gsub('Boise City', 'Boise', metro)) %>%
-        mutate(metro = gsub('Urban ', '', metro)) %>%
-        mutate(metro = gsub('^York', 'Harrisburg', metro)) %>%
-        mutate(metro = gsub('Winston', 'Winston-Salem', metro)) %>%
-        mutate(metro_match = tolower(metro))
-    
-
-```
-
-```{r}
-    ## merge datasets    
-
-    library(stats)
-    metro_cities <- left_join(metro_data, cities, by = "metro_match")
-
-    metros <- metro_cities[complete.cases(metro_cities),]
-    ## as a quality check nothing below #120
-    bad_metros <- metro_cities[!complete.cases(metro_cities),]
-```
-
-
-```{r}
-
-## to make legacy code work assign to variable name cities
-cities <- metros
-```
-
-```{r, results='asis'}
-#print(xtable(head(cities, 4), align = c("r","r", "c", "c", "c", "c", "c", "c")), type="html", include.rownames=FALSE, include.colnames = TRUE)
-```
-
-Use the `twitteR::searchTwitter` command. 
-
-```{r echo = 1, "get tweets", message=FALSE, warning=FALSE}
-n.cities <- 40
-
-if (n.cities > nrow(cities)) n.cities <- nrow(cities)
-
-collected_df <- data_frame("n" = 1:n.cities, 
-                           "lat" = rep_len(1., n.cities),
-                           "lon" = rep_len(1., n.cities),
-                           "tweets" = as.list(rep_len(c("a","b"), n.cities)),
-                           "n.tweets" = length(tweets),
-                           "population" = rep_len(1., n.cities),
-                           "name" = rep_len("a", n.cities))
-
-for (i in 1:n.cities){
-    latitude <- cities$lat[i]
-    longitude <- cities$long[i]
-    
-    geocode.x <- paste0(latitude, "," , longitude, "," , radius)
-        # Twitter API limit: 180 calls / 15 minutes = 12 seconds for steady state
-        Sys.sleep(4.)    
-        
-        tweets <- searchTwitter(searchString = searchString.x , n = n.x , geocode = geocode.x, since = since.date, retryOnRateLimit=120)
-        
-        collected_df[i,1] <- i
-        collected_df[i,2] <- latitude
-        collected_df[i,3] <- longitude
-        #collected_df[i,4] <- tweets
-        collected_df[i,5] <- length(tweets)
-        collected_df[i,6] <- cities$population[i]
-        collected_df[i,7] <- cities$metro[i]
-    }
-
-
-
-```
-
-Data collection for the top `r n.cities` cities (by population) in the U.S. This includes cities from `r collected_df$name[1]` to `r collected_df$name[n.cities]`.
-
-```{r "analyze data", echo=FALSE}
-
-analyzed_df <- collected_df %>% 
-    mutate("tweet.flux" = 10^6 * n.tweets/population/duration.days ) %>% 
-    select(name, lon, lat, tweet.flux, n.tweets, population)
-```
-
-# Tweet-Map for `r searchString.x`?
-
-```{r echo = FALSE, fig.align='center'}
-    library(ggmap)
-    
-    map = get_googlemap(center =  c(lon = -95.58, lat = 36.83),
-            zoom = 3, size = c(390, 250), scale = 2, source = "google",
-            maptype="roadmap") #, key = my.secret.key)
-    map.plot <- ggmap(map)
-
-```
-
-
-```{r echo=TRUE, fig.align='center'}
-map.plot +
-    geom_point(aes(x = lon, y = lat, fill = tweet.flux, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
-    ggtitle(paste0(searchString.x, " tweets in ", duration.days," days since ", since.date, " r = ", radius)) +
-    scale_fill_gradient(low = "#BBBBFF", high = "#EE3300", space = "Lab", na.value = "grey50", guide = "colourbar")
-
-```
-
-
-
-## `r searchString.x` AMB tweet-flux
-
-Here are the top few cities by tweet flux (in "twipermipeds").
-
-```{r, results='asis'}
-analyzed_df$population <- analyzed_df$population %>% as.integer
-
-print(xtable(head(analyzed_df[order(analyzed_df$tweet.flux, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
-```
-
-## `r searchString.x` AMB tweet count
-
-Here are the top few cities sorted by raw tweets, again with major metro areas leading. Note that some other cities, like Chicago, have a large number of tweets but a lower flux because of their higher population.
-
-```{r, results='asis'}
-print(xtable(head(analyzed_df[order(analyzed_df$n.tweets, decreasing = TRUE),c(-2,-3)], min(15, nrow(analyzed_df)))), type="html", include.rownames=FALSE, include.colnames = TRUE)
-```
 
 
 
