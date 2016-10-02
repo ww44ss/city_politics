@@ -1,5 +1,5 @@
 ---
-title: "Metro Areas with #AI tweet flux"
+title: "Metro Areas with Rudy Giuliani tweet flux"
 author: "Winston Saunders"
 date: "Oct 1, 2016"
 output: 
@@ -13,7 +13,7 @@ output:
 # Rev
     0.1 28 Sept 2016 supporess printing of all the code
     0.2 30 Sept 2016 use metro area populations from wikipedia
-    0.5 1 Oct 2016 add ChoroplethRmaps to reduce map clutter and add date span
+    0.5 1 Oct 2016 add ChoroplethRmaps to reduce 'chart junk' and add date span
     
 
 # Set-up
@@ -125,6 +125,8 @@ data(state.map)
     metro_cities <- left_join(metro_data, cities, by = "metro_match")
 
     metros <- metro_cities[complete.cases(metro_cities),]
+    metros <- metros %>% mutate(metro = as.character(metro))
+    
     bad_metros <- metro_cities[!complete.cases(metro_cities),]
 ```
 
@@ -164,11 +166,11 @@ Keeping first `r n.cities` metro areas comprises a total population of `r (sum(c
 ```{r "set up tweet search", echo=TRUE}
 
 ## set up search terms
-searchString.x <- "#AI"    # search term
+searchString.x <- "Rudy Giuliani"    # search term
 n.x <- 3000                     # number of tweets
 radius <- "30mi"               # radius around selected geo-location
-days.ago <-10
-duration.days <- 7             # how many days
+days.ago <-60
+duration.days <- 30             # how many days
 since.date <- (Sys.Date() - days.ago) %>% as.character # calculated starting date
 until.date <- (Sys.Date() - days.ago + duration.days) %>% as.character # calculated ending date
 
@@ -221,7 +223,7 @@ for (i in 1:n.cities){
         #collected_df[i,4] <- tweets
         collected_df[i,5] <- length(tweets)
         collected_df[i,6] <- cities$population[i]
-        collected_df[i,7] <- cities$name[i] 
+        collected_df[i,7] <- cities$metro[i] 
     }
 
 
@@ -253,8 +255,8 @@ analyzed_df <- collected_df %>%
 ```{r echo=TRUE, fig.align='center', fig.align='center', fig.height=4, fig.width=7}
     #map.plot +  ## use this to underlay with google map
     ggplot() +   ## use this to underlay with simple border outlines
-    geom_polygon(data = state.map %>% filter(region != "alaska" & region != "hawaii"), aes(x=long, y=lat, group = group), fill = "#DAC143", color = "#36180D") +
-    geom_point(aes(x = lon, y = lat, fill = tweet.flux, size = n.tweets), data=analyzed_df, pch=21, color = "#33333399") +
+    geom_polygon(data = state.map %>% filter(region != "alaska" & region != "hawaii"), aes(x=long, y=lat, group = group), fill = "#FCF581", color = "#36180D", size =0.5) +
+    geom_point(aes(x = lon, y = lat, fill = tweet.flux, size = n.tweets), data=analyzed_df, pch=21, color = "#333333") +
     ggtitle(paste0(searchString.x, " tweets from ", since.date, " until ", until.date)) +
     scale_fill_gradient(low = "#92A0CD", high = "#B32F2A", space = "Lab", na.value = "grey50", guide = "colourbar") +
         theme_bw()
